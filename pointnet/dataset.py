@@ -225,16 +225,14 @@ class LasDataset(data.Dataset):
         point_set = pts[choice, :]
 
         with open(self.json_files[index], 'r') as f:
-            annot = np.asarray(json.load(f)['rack'], dtype=np.float32)
-
-        # Create a rough annotation
-        offset = np.array((0.25, 0.25), dtype=np.float32)
-        rand_1, rand_2 = np.random.random(2) * 2.0 - 1.0, np.random.random(2) * 2.0 - 1.0
-        rough_annot = annot[0] - rand_1 - offset, annot[1] + rand_2 + offset
+            data = json.load(f)
+            fine_annot = np.asarray(data['rack'], dtype=np.float32)
+            rough_annot = np.asarray(data['rough_rack'], dtype=np.float32)
+            buffered_annot = np.asarray(data['buffered_annot'], dtype=np.float32)
 
         # Center the points and scale them to a box of size 1x1x1
-        center = (annot[0] + annot[1]) / 2.0
-        scale = np.max(annot[1] - annot[0])
+        center = (buffered_annot[0] + buffered_annot[1]) / 2.0
+        scale = np.max(buffered_annot[1] - buffered_annot[0])
         point_set = (point_set - center) / scale
 
         if self.data_augmentation:
@@ -244,8 +242,8 @@ class LasDataset(data.Dataset):
             point_set += np.random.normal(0, 0.02, size=point_set.shape)  # random jitter
 
         point_set = torch.from_numpy(point_set.astype(np.float32))
-        annot = torch.from_numpy(annot)
-        return (point_set, rough_annot), annot
+        rough_annot, fine_annot = torch.from_numpy(rough_annot), torch.from_numpy(fine_annot)
+        return (point_set, rough_annot), fine_annot
 
     def __len__(self):
         return len(self.las_files)
@@ -257,6 +255,12 @@ class LasDataset(data.Dataset):
 #     points = grab_points_inside(buffered_rough_rack)
 #     write_points_to_las(points)
 #     write_data_to_json(rack, rand_offset)
+
+'''
+offset = np.array((0.25, 0.25), dtype=np.float32)
+rand_1, rand_2 = np.random.random(2) * 2.0 - 1.0, np.random.random(2) * 2.0 - 1.0
+rough_annot = annot[0] - rand_1 - offset, annot[1] + rand_2 + offset
+'''
 
 
 if __name__ == '__main__':
