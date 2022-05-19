@@ -8,6 +8,7 @@ import sys
 from tqdm import tqdm 
 import json
 from plyfile import PlyData, PlyElement
+from laspy.file import File as LasFile
 
 def get_segmentation_classes(root):
     catfile = os.path.join(root, 'synsetoffset2category.txt')
@@ -43,6 +44,7 @@ def get_segmentation_classes(root):
             print("category {} num segmentation classes {}".format(item, num_seg_classes))
             f.write("{}\t{}\n".format(item, num_seg_classes))
 
+
 def gen_modelnet_id(root):
     classes = []
     with open(os.path.join(root, 'train.txt'), 'r') as f:
@@ -52,6 +54,7 @@ def gen_modelnet_id(root):
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../misc/modelnet_id.txt'), 'w') as f:
         for i in range(len(classes)):
             f.write('{}\t{}\n'.format(classes[i], i))
+
 
 class ShapeNetDataset(data.Dataset):
     def __init__(self,
@@ -140,6 +143,7 @@ class ShapeNetDataset(data.Dataset):
     def __len__(self):
         return len(self.datapath)
 
+
 class ModelNetDataset(data.Dataset):
     def __init__(self,
                  root,
@@ -190,6 +194,70 @@ class ModelNetDataset(data.Dataset):
 
     def __len__(self):
         return len(self.fns)
+
+
+class LasDataset(data.Dataset):
+
+    def __init__(self,
+                 root,
+                 npoints=2500,
+                 split='train',
+                 data_augmentation=True,
+                 normalize=False):
+
+        self.root = root
+        self.npoints = npoints
+        self.split = split
+        self.data_augmentation = data_augmentation
+        self.normalize = normalize
+
+        self.las_files = []
+        self.json_files = []
+
+    def __getitem__(self, index):
+
+        # Read the data into an array
+        with LasFile(self.las_files[index]) as f:
+            pts = np.vstack([f.x, f.y, f.z]).T
+
+        # Randomly subsample the point cloud
+        choice = np.random.choice(len(pts), self.npoints, replace=True)
+        point_set = pts[choice, :]
+
+        with open(self.json_files[index], 'r') as f:
+            annot = np.asarray(json.load(f)['rack'], dtype=np.float32)
+
+        # Create a rough annotation
+        offset = np.array((0.25, 0.25), dtype=np.float32)
+        rand_1, rand_2 = np.random.random(2) * 2.0 - 1.0, np.random.random(2) * 2.0 - 1.0
+        rough_annot = annot[0] - rand_1 - offset, annot[1] + rand_2 + offset
+
+        # Center the points and scale them to a box of size 1x1x1
+        center = (annot[0] + annot[1]) / 2.0
+        scale = np.max(annot[1] - annot[0])
+        point_set = (point_set - center) / scale
+
+        if self.data_augmentation:
+            theta = np.random.uniform(0, np.pi * 2)
+            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+            point_set[:, [0, 2]] = point_set[:, [0, 2]].dot(rotation_matrix)  # random rotation
+            point_set += np.random.normal(0, 0.02, size=point_set.shape)  # random jitter
+
+        point_set = torch.from_numpy(point_set.astype(np.float32))
+        annot = torch.from_numpy(annot)
+        return (point_set, rough_annot), annot
+
+    def __len__(self):
+        return len(self.las_files)
+
+
+# for rack in rack_annotations:
+#     rough_rack = add_random_jitter(rack)  # each vertex can move a random amount, outward by 1 meters, inward by 0.5 meters
+#     buffered_rough_rack = add_buffer(rough_rack)
+#     points = grab_points_inside(buffered_rough_rack)
+#     write_points_to_las(points)
+#     write_data_to_json(rack, rand_offset)
+
 
 if __name__ == '__main__':
     dataset = sys.argv[1]
