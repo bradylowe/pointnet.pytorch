@@ -56,8 +56,16 @@ def plot_rack(rack, color='black'):
 
 if __name__ == "__main__":
 
+    import argparse
+    parser = argparse.ArgumentParser(description='Create dataset')
+    parser.add_argument('--multiple', action='store_true', help='Load test file with multiple racks')
+    args = parser.parse_args()
+
     # Load a LabelPC JSON file with rack(s) in it
-    test_file = 'test/single_rack.json'
+    if args.multiple:
+        test_file = 'test/many_racks.json'
+    else:
+        test_file = 'test/single_rack.json'
 
     # Get the rack(s)
     shapes = read_shapes_from_json(test_file)
