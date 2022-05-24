@@ -86,9 +86,9 @@ class Rack:
 
     def save(self, filename):
         with open(filename, 'w') as f:
-            data = {'fine': self.fine,
-                    'jittered': self.jittered,
-                    'buffered': self.buffered}
+            data = {'fine': self.fine.tolist(),
+                    'jittered': self.jittered.tolist(),
+                    'buffered': self.buffered.tolist()}
             json.dump(data, f)
 
 
