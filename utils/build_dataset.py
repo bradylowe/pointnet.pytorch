@@ -92,6 +92,41 @@ class Rack:
             json.dump(data, f)
 
 
+class PointCloud:
+
+    def __init__(self, filename, rgb=False, classification=False, intensity=False, user_data=False):
+        self.filename = filename
+
+        las = laspy.read(filename)
+        self.points = np.vstack((las.x, las.y, las.z)).T
+        self.rgb = np.vstack((las.red, las.green, las.blue)).T if rgb else None
+        self.classification = las.classification if classification else None
+        self.intensity = las.intensity if intensity else None
+        self.user_data = las.user_data if user_data else None
+
+    def save(self, filename, mask):
+        header = laspy.LasHeader(point_format=2, version='1.2')
+        #header.offsets = np.min(self.points[mask], axis=0)
+        #header.scales = np.array([0.001, 0.001, 0.001])
+        las = laspy.LasData(header)
+
+        las.x, las.y, las.z = self.points[mask].T
+        if self.rgb is not None:
+            las.red, las.green, las.blue = self.rgb[mask].T
+        if self.classification is not None:
+            las.classification = self.classification[mask]
+        if self.intensity is not None:
+            las.intensity = self.intensity[mask]
+        if self.user_data is not None:
+            las.user_data = self.user_data[mask]
+
+        las.write(filename)
+
+    def plot(self, mask):
+        x, y = self.points[mask, :2].T
+        plt.scatter(x, y, 1, 'black')
+
+
 if __name__ == "__main__":
 
     import argparse
