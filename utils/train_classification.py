@@ -2,11 +2,9 @@ from __future__ import print_function
 import argparse
 import os
 import random
-import torch
-import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
-from pointnet.dataset import ShapeNetDataset, ModelNetDataset
+from pointnet.dataset import LasDataset
 from pointnet.model import PointNetCls, feature_transform_regularizer
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -24,7 +22,7 @@ parser.add_argument(
 parser.add_argument('--outf', type=str, default='cls', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
 parser.add_argument('--dataset', type=str, required=True, help="dataset path")
-parser.add_argument('--dataset_type', type=str, default='shapenet', help="dataset type shapenet|modelnet40")
+parser.add_argument('--dataset_type', type=str, default='las', help="dataset type")
 parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
 
 opt = parser.parse_args()
@@ -37,25 +35,13 @@ print("Random Seed: ", opt.manualSeed)
 random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
-if opt.dataset_type == 'shapenet':
-    dataset = ShapeNetDataset(
+dataset, test_dataset = None, None
+if opt.dataset_type == 'las':
+    dataset = LasDataset(
         root=opt.dataset,
-        classification=True,
         npoints=opt.num_points)
 
-    test_dataset = ShapeNetDataset(
-        root=opt.dataset,
-        classification=True,
-        split='test',
-        npoints=opt.num_points,
-        data_augmentation=False)
-elif opt.dataset_type == 'modelnet40':
-    dataset = ModelNetDataset(
-        root=opt.dataset,
-        npoints=opt.num_points,
-        split='trainval')
-
-    test_dataset = ModelNetDataset(
+    test_dataset = LasDataset(
         root=opt.dataset,
         split='test',
         npoints=opt.num_points,

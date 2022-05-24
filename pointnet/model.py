@@ -9,6 +9,7 @@ import torch.nn.functional as F
 
 
 class STN3d(nn.Module):
+
     def __init__(self):
         super(STN3d, self).__init__()
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
@@ -24,7 +25,6 @@ class STN3d(nn.Module):
         self.bn3 = nn.BatchNorm1d(1024)
         self.bn4 = nn.BatchNorm1d(512)
         self.bn5 = nn.BatchNorm1d(256)
-
 
     def forward(self, x):
         batchsize = x.size()[0]
@@ -44,7 +44,6 @@ class STN3d(nn.Module):
         x = x + iden
         x = x.view(-1, 3, 3)
         return x
-
 
 class STNkd(nn.Module):
     def __init__(self, k=64):
@@ -83,6 +82,7 @@ class STNkd(nn.Module):
         x = x + iden
         x = x.view(-1, self.k, self.k)
         return x
+
 
 class PointNetfeat(nn.Module):
     def __init__(self, global_feat = True, feature_transform = False):
@@ -125,6 +125,7 @@ class PointNetfeat(nn.Module):
         else:
             x = x.view(-1, 1024, 1).repeat(1, 1, n_pts)
             return torch.cat([x, pointfeat], 1), trans, trans_feat
+
 
 class PointNetCls(nn.Module):
     def __init__(self, k=2, feature_transform=False):
@@ -174,6 +175,7 @@ class PointNetDenseCls(nn.Module):
         x = x.view(batchsize, n_pts, self.k)
         return x, trans, trans_feat
 
+
 def feature_transform_regularizer(trans):
     d = trans.size()[1]
     batchsize = trans.size()[0]
@@ -182,6 +184,7 @@ def feature_transform_regularizer(trans):
         I = I.cuda()
     loss = torch.mean(torch.norm(torch.bmm(trans, trans.transpose(2,1)) - I, dim=(1,2)))
     return loss
+
 
 if __name__ == '__main__':
     sim_data = Variable(torch.rand(32,3,2500))
