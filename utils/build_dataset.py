@@ -51,17 +51,22 @@ class Rack:
         keep_2 = (points[:, :2] <= rack[1]).all(axis=1)
         return keep_1 & keep_2
 
+    @staticmethod
+    def plot_rack(rack, color):
+        x_min, y_min = rack[0]
+        x_max, y_max = rack[1]
+
+        x_points = [x_min, x_max, x_max, x_min, x_min]
+        y_points = [y_min, y_min, y_max, y_max, y_min]
+
+        plt.plot(x_points, y_points, color)
+
     def plot(self):
         """Plot the three rectangles on the same plot with different colors"""
-        for rack, color in zip([self.fine, self.jittered, self.buffered], ['red', 'green', 'blue']):
-            x_min, y_min = rack[0]
-            x_max, y_max = rack[1]
-
-            x_points = [x_min, x_max, x_max, x_min, x_min]
-            y_points = [y_min, y_min, y_max, y_max, y_min]
-
-            plt.plot(x_points, y_points, color)
-            plt.legend(['Fine', 'Rough', 'Buffered'])
+        Rack.plot_rack(self.fine, 'green')
+        Rack.plot_rack(self.jittered, 'red')
+        Rack.plot_rack(self.buffered, 'blue')
+        plt.legend(['Fine', 'Rough', 'Buffered', 'Min Jitter', 'Max Jitter'])
 
     def save(self, filename):
         with open(filename, 'w') as f:
