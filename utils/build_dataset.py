@@ -11,6 +11,9 @@ class Rack:
     jitter_inward_limit = 0.5
     buffer_amt = 1.0
 
+    min_height = 0.5
+    max_height = 8.0
+
     def __init__(self, data: dict):
         """Takes in a dictionary from a LabelPC shape annotation"""
         self.type = data['label']
@@ -47,8 +50,10 @@ class Rack:
     @staticmethod
     def points_in_rack(points, rack):
         """Returns a boolean mask indicating which points are contained in this rack"""
-        keep_1 = (points[:, :2] >= rack[0]).all(axis=1)
-        keep_2 = (points[:, :2] <= rack[1]).all(axis=1)
+        min_p = np.array((rack[0][0], rack[0][1], Rack.min_height))
+        max_p = np.array((rack[1][0], rack[1][1], Rack.max_height))
+        keep_1 = (points[:, :3] >= min_p).all(axis=1)
+        keep_2 = (points[:, :3] <= max_p).all(axis=1)
         return keep_1 & keep_2
 
     @staticmethod
