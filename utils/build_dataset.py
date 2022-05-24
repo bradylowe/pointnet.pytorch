@@ -15,7 +15,7 @@ class Rack:
         """Takes in a dictionary from a LabelPC shape annotation"""
         self.type = data['label']
         # Todo: un-rotate the rack
-        self.vertices = np.min(data['vertices'], axis=0), np.max(data['vertices'], axis=0)
+        self.vertices = np.array((np.min(data['vertices'], axis=0), np.max(data['vertices'], axis=0)))
 
         self.fine = self.vertices
         self.jittered = self.jitter(self.fine)
