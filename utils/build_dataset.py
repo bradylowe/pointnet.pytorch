@@ -66,21 +66,21 @@ class Rack:
         return min_jitter, max_jitter
 
     @staticmethod
-    def plot_rack(rack, color):
+    def plot_rack(rack, color, linestyle='-'):
         x_min, y_min = rack[0]
         x_max, y_max = rack[1]
 
         x_points = [x_min, x_max, x_max, x_min, x_min]
         y_points = [y_min, y_min, y_max, y_max, y_min]
 
-        plt.plot(x_points, y_points, color)
+        plt.plot(x_points, y_points, color, linestyle=linestyle)
 
     def plot(self):
         """Plot the three rectangles on the same plot with different colors"""
         Rack.plot_rack(self.fine, 'green')
-        Rack.plot_rack(self.jittered, 'red')
+        Rack.plot_rack(self.jittered, 'red', '--')
         Rack.plot_rack(self.buffered, 'blue')
-        Rack.plot_rack(Rack.min_jitter_bounds(self.fine), 'yellow')
+        Rack.plot_rack(Rack.min_jitter_bounds(self.fine), 'violet')
         Rack.plot_rack(Rack.max_jitter_bounds(self.fine), 'purple')
         plt.legend(['Fine', 'Rough', 'Buffered', 'Min Jitter', 'Max Jitter'])
 
