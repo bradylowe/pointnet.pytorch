@@ -47,8 +47,8 @@ class Rack:
     @staticmethod
     def points_in_rack(points, rack):
         """Returns a boolean mask indicating which points are contained in this rack"""
-        keep_1 = points[:, :2] >= rack[0]
-        keep_2 = points[:, :2] <= rack[1]
+        keep_1 = (points[:, :2] >= rack[0]).all(axis=1)
+        keep_2 = (points[:, :2] <= rack[1]).all(axis=1)
         return keep_1 & keep_2
 
     def plot(self):
