@@ -45,6 +45,7 @@ class STN3d(nn.Module):
         x = x.view(-1, 3, 3)
         return x
 
+
 class STNkd(nn.Module):
     def __init__(self, k=64):
         super(STNkd, self).__init__()

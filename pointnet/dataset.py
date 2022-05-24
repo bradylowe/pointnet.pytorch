@@ -21,6 +21,7 @@ class LasDataset(data.Dataset):
         self.data_augmentation = data_augmentation
         self.normalize = normalize
 
+        # Todo: fill these lists with the correct values (filenames found in "root")
         self.las_files = []
         self.json_files = []
 
