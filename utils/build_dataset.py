@@ -127,6 +127,69 @@ class PointCloud:
         plt.scatter(x, y, 1, 'black')
 
 
+class Scan:
+
+    def __init__(self, filename, rgb=False, classification=False, intensity=False, user_data=False):
+
+        # Load annotations and parse racks
+        self.json_file = filename.replace('.las', '.json').replace('LAS', 'JSON')
+        with open(self.json_file, 'r') as f:
+            self.json_data = json.load(f)
+        self.racks = [Rack(shape) for shape in self.json_data['shapes'] if 'rack' in shape['label']]
+
+        # Load points
+        source = self.json_data['source']
+        self.las_file = os.path.join(os.path.dirname(self.json_file), source).replace('JSON', 'LAS')
+        self.pc = PointCloud(self.las_file, rgb=rgb, classification=classification,
+                             intensity=intensity, user_data=user_data)
+
+    def save(self, output_dir):
+
+        # Set up output directories
+        las_dir, json_dir = os.path.join(output_dir, 'las'), os.path.join(output_dir, 'json')
+        if not os.path.exists(las_dir):
+            os.makedirs(las_dir)
+        if not os.path.exists(json_dir):
+            os.makedirs(json_dir)
+
+        # Make sure we don't overwrite existing files
+        idx_offset = 0
+        for filename in os.listdir(json_dir):
+            n = int(filename[5:-5])
+            if n > idx_offset:
+                idx_offset = n
+        idx_offset += 1
+
+        # Loop over racks
+        for rack_idx, rack in enumerate(self.racks):
+            idx = rack_idx + idx_offset
+
+            # Write JSON data
+            json_file = os.path.join(json_dir, f'rack_{idx}.json')
+            rack.save(json_file)
+            print('Saved', json_file)
+
+            # Subsample LAS file and save
+            mask = Rack.points_in_rack(self.pc.points, rack.buffered)
+            las_file = os.path.join(las_dir, f'rack_{idx}.las')
+            self.pc.save(las_file, mask)
+            print('Saved', las_file)
+
+    def plot(self):
+        for rack in self.racks:
+            rack.plot()
+            self.pc.plot(Rack.points_in_rack(self.pc.points, rack.buffered))
+
+        # Make the plot bigger so it looks a little nicer
+        buf = 3
+        x_lim, y_lim = plt.xlim(), plt.ylim()
+        plt.xlim([x_lim[0] - buf, x_lim[1] + buf])
+        plt.ylim([y_lim[0] - buf, y_lim[1] + buf])
+
+        # Show the plot
+        plt.show()
+
+
 if __name__ == "__main__":
 
     import argparse
@@ -140,9 +203,6 @@ if __name__ == "__main__":
     else:
         test_file = 'test/single_rack.json'
 
-    with open(test_file, 'r') as f:
-        for shape in json.load(f)['shapes']:
-            if 'rack' in shape['label']:
-                r = Rack(shape)
-                r.plot()
-        plt.show()
+    scan = Scan(test_file)
+    scan.plot()
+    #scan.save('dataset')
