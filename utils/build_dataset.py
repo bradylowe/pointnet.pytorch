@@ -7,13 +7,14 @@ import laspy
 
 class Rack:
 
-    jitter_inward_limit = 0.5
     jitter_outward_limit = 1.0
+    jitter_inward_limit = 0.5
     buffer_amt = 1.0
 
     def __init__(self, data: dict):
         """Takes in a dictionary from a LabelPC shape annotation"""
         self.type = data['label']
+        # Todo: un-rotate the rack
         self.vertices = np.min(data['vertices'], axis=0), np.max(data['vertices'], axis=0)
 
         self.fine = self.vertices
@@ -28,9 +29,9 @@ class Rack:
         The points only move outward (out of the rack) by at most `jitter_outward_limit`.
         """
         sum_limit = Rack.jitter_outward_limit + Rack.jitter_inward_limit
-        offset = (Rack.jitter_outward_limit - Rack.jitter_inward_limit) / 2.0
-        jitter_1, jitter_2 = (np.random.random(2) - 0.5) * sum_limit
-        return np.array((rack[0] - offset + jitter_1, rack[1] + offset + jitter_2))
+        jitter_1, jitter_2 = np.random.random(2) * sum_limit
+        return np.array((rack[0] - Rack.jitter_outward_limit + jitter_1,
+                         rack[1] + Rack.jitter_outward_limit - jitter_2))
 
     @staticmethod
     def buffer(rack):
