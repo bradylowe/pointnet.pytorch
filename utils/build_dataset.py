@@ -52,6 +52,20 @@ class Rack:
         return keep_1 & keep_2
 
     @staticmethod
+    def min_jitter_bounds(rack):
+        sum_limit = Rack.jitter_outward_limit + Rack.jitter_inward_limit
+        center = rack[0] - (Rack.jitter_outward_limit - Rack.jitter_inward_limit) / 2.0
+        min_jitter, max_jitter = center + (0.0 - 0.5) * sum_limit, center + (1.0 - 0.5) * sum_limit
+        return min_jitter, max_jitter
+
+    @staticmethod
+    def max_jitter_bounds(rack):
+        sum_limit = Rack.jitter_outward_limit + Rack.jitter_inward_limit
+        center = rack[1] + (Rack.jitter_outward_limit - Rack.jitter_inward_limit) / 2.0
+        min_jitter, max_jitter = center + (0.0 - 0.5) * sum_limit, center + (1.0 - 0.5) * sum_limit
+        return min_jitter, max_jitter
+
+    @staticmethod
     def plot_rack(rack, color):
         x_min, y_min = rack[0]
         x_max, y_max = rack[1]
@@ -66,6 +80,8 @@ class Rack:
         Rack.plot_rack(self.fine, 'green')
         Rack.plot_rack(self.jittered, 'red')
         Rack.plot_rack(self.buffered, 'blue')
+        Rack.plot_rack(Rack.min_jitter_bounds(self.fine), 'yellow')
+        Rack.plot_rack(Rack.max_jitter_bounds(self.fine), 'purple')
         plt.legend(['Fine', 'Rough', 'Buffered', 'Min Jitter', 'Max Jitter'])
 
     def save(self, filename):
