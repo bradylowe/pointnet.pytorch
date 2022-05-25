@@ -144,14 +144,17 @@ class Scan:
 
         # Load points
         source = self.json_data['source']
-        self.las_file = os.path.join(os.path.dirname(self.json_file), source).replace('JSON', 'LAS')
-        self.pc = PointCloud(self.las_file, rgb=rgb, classification=classification,
+        ext = source.split('.')[-1]
+        self.pc_file = os.path.join(os.path.dirname(self.json_file), source).replace('JSON', ext.upper())
+        self.pc = PointCloud(self.pc_file, rgb=rgb, classification=classification,
                              intensity=intensity, user_data=user_data)
 
-    def save(self, output_dir):
+    def save(self, output_dir, zip=False):
+
+        pc_ext = 'laz' if zip else 'las'
 
         # Set up output directories
-        las_dir, json_dir = os.path.join(output_dir, 'las'), os.path.join(output_dir, 'json')
+        las_dir, json_dir = os.path.join(output_dir, pc_ext), os.path.join(output_dir, 'json')
         if not os.path.exists(las_dir):
             os.makedirs(las_dir)
         if not os.path.exists(json_dir):
@@ -176,9 +179,9 @@ class Scan:
 
             # Subsample LAS file and save
             mask = Rack.points_in_rack(self.pc.points, rack.buffered)
-            las_file = os.path.join(las_dir, f'rack_{idx}.las')
-            self.pc.save(las_file, mask)
-            print('Saved', las_file)
+            pc_file = os.path.join(las_dir, f'rack_{idx}.{pc_ext}')
+            self.pc.save(pc_file, mask)
+            print('Saved', pc_file)
 
     def plot(self):
         for rack in self.racks:
@@ -200,6 +203,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Create dataset')
     parser.add_argument('--multiple', action='store_true', help='Load test file with multiple racks')
+    parser.add_argument('--zip', action='store_true', help='If True, save point clouds as LAZ')
     args = parser.parse_args()
 
     # Load a LabelPC JSON file with rack(s) in it
@@ -210,4 +214,4 @@ if __name__ == "__main__":
 
     scan = Scan(test_file)
     scan.plot()
-    #scan.save('dataset')
+    #scan.save('dataset', zip=args.zip)
