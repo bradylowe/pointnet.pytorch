@@ -3,6 +3,7 @@ import torch.utils.data as data
 import torch
 import numpy as np
 import json
+import os
 import laspy
 
 
@@ -21,9 +22,9 @@ class LasDataset(data.Dataset):
         self.data_augmentation = data_augmentation
         self.normalize = normalize
 
-        # Todo: fill these lists with the correct values (filenames found in "root")
-        self.las_files = []
-        self.json_files = []
+        self.json_dir, self.las_dir = os.path.join(root, 'json'), os.path.join(root, 'las')
+        self.las_files = [os.path.join(self.las_dir, f) for f in os.listdir(self.las_dir)]
+        self.json_files = [os.path.join(self.json_dir, f) for f in os.listdir(self.json_dir)]
 
     def __getitem__(self, index):
 
