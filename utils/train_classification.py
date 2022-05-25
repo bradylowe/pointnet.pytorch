@@ -7,6 +7,7 @@ import torch.utils.data
 from pointnet.dataset import LasDataset
 from pointnet.model import PointNetCls, feature_transform_regularizer
 import torch.nn.functional as F
+from torch.nn import MSELoss, L1Loss
 from tqdm import tqdm
 
 os.system('color')
@@ -102,7 +103,7 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         classifier = classifier.train()
         pred, trans, trans_feat = classifier(points)
-        loss = F.nll_loss(pred, target)
+        loss = MSELoss(pred, target)
         if opt.feature_transform:
             loss += feature_transform_regularizer(trans_feat) * 0.001
         loss.backward()
