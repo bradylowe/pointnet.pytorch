@@ -47,10 +47,12 @@ class LasDataset(data.Dataset):
             rough_annot = np.asarray(data['rough_rack'], dtype=np.float32)
             buffered_annot = np.asarray(data['buffered_annot'], dtype=np.float32)
 
-        # Center the points and scale them to a box of size 1x1x1
+        # Center the point cloud and racks and scale them to a box of size 1x1x1
         center = (buffered_annot[0] + buffered_annot[1]) / 2.0
         scale = np.max(buffered_annot[1] - buffered_annot[0])
         point_set[:2] = (point_set[:2] - center) / scale
+        fine_annot = (fine_annot - center) / scale
+        rough_annot = (rough_annot - center) / scale
 
         if self.data_augmentation:
             theta = np.random.uniform(0, np.pi * 2)
