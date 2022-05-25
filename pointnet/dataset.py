@@ -43,9 +43,9 @@ class LasDataset(data.Dataset):
 
         with open(self.json_files[index], 'r') as f:
             data = json.load(f)
-            fine_annot = np.asarray(data['rack'], dtype=np.float32)
-            rough_annot = np.asarray(data['rough_rack'], dtype=np.float32)
-            buffered_annot = np.asarray(data['buffered_annot'], dtype=np.float32)
+            fine_annot = np.asarray(data['fine'], dtype=np.float32)
+            rough_annot = np.asarray(data['jittered'], dtype=np.float32)
+            buffered_annot = np.asarray(data['buffered'], dtype=np.float32)
 
         # Center the point cloud and racks and scale them to a box of size 1x1x1
         center = (buffered_annot[0] + buffered_annot[1]) / 2.0
