@@ -134,10 +134,10 @@ class PointCloud:
 
 class Scan:
 
-    def __init__(self, filename, rgb=False, classification=False, intensity=False, user_data=False):
+    def __init__(self, json_file, rgb=False, classification=False, intensity=False, user_data=False):
 
         # Load annotations and parse racks
-        self.json_file = filename.replace('.las', '.json').replace('LAS', 'JSON')
+        self.json_file = json_file
         with open(self.json_file, 'r') as f:
             self.json_data = json.load(f)
         self.racks = [Rack(shape) for shape in self.json_data['shapes'] if 'rack' in shape['label']]
