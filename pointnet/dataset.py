@@ -7,10 +7,6 @@ import os
 import laspy
 
 
-def flatten_rack(rack):
-    return rack[0][0], rack[0][1], rack[1][0], rack[1][1]
-
-
 class LasDataset(data.Dataset):
 
     def __init__(self,
@@ -64,8 +60,8 @@ class LasDataset(data.Dataset):
             point_set += np.random.normal(0, 0.02, size=point_set.shape)  # random jitter
 
         point_set = torch.from_numpy(point_set.astype(np.float32))
-        rough_annot = torch.from_numpy(flatten_rack(rough_annot))
-        fine_annot = torch.from_numpy(flatten_rack(fine_annot))
+        rough_annot = torch.from_numpy(rough_annot.flatten())
+        fine_annot = torch.from_numpy(fine_annot.flatten())
         return (point_set, rough_annot), fine_annot
 
     def __len__(self):
