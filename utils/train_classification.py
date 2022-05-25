@@ -108,9 +108,7 @@ for epoch in range(opt.nepoch):
             loss += feature_transform_regularizer(trans_feat) * 0.001
         loss.backward()
         optimizer.step()
-        pred_choice = pred.data.max(1)[1]
-        correct = pred_choice.eq(target.data).cpu().sum()
-        print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, loss.item(), correct.item() / float(opt.batchSize)))
+        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
@@ -122,13 +120,11 @@ for epoch in range(opt.nepoch):
             classifier = classifier.eval()
             pred, _, _ = classifier(points)
             loss = F.nll_loss(pred, target)
-            pred_choice = pred.data.max(1)[1]
-            correct = pred_choice.eq(target.data).cpu().sum()
-            print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize)))
+            print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss.item()))
 
     torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
-total_correct = 0
+total_loss = 0
 total_testset = 0
 for i,data in tqdm(enumerate(testdataloader, 0)):
     points, target = data
@@ -138,9 +134,7 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
         points, target = points.cuda(), target.cuda()
     classifier = classifier.eval()
     pred, _, _ = classifier(points)
-    pred_choice = pred.data.max(1)[1]
-    correct = pred_choice.eq(target.data).cpu().sum()
-    total_correct += correct.item()
+    total_loss += MSELoss(pred, target)
     total_testset += points.size()[0]
 
-print("final accuracy {}".format(total_correct / float(total_testset)))
+print("final average loss {}".format(total_loss / float(total_testset)))
