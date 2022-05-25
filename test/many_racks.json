@@ -2,7 +2,7 @@
   "version": "10.0.0",
   "name": "room1",
   "temp": null,
-  "source": "room1.las",
+  "source": "room1.laz",
   "level": "main",
   "floor_height": null,
   "scanners": [],
