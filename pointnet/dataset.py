@@ -21,6 +21,7 @@ class LasDataset(data.Dataset):
         self.split = split
         self.data_augmentation = data_augmentation
         self.normalize = normalize
+        self.output_names = ['min_x', 'min_y', 'max_x', 'max_y']
 
         self.json_dir, self.las_dir = os.path.join(root, 'json'), os.path.join(root, 'las')
         self.las_files = [os.path.join(self.las_dir, f) for f in os.listdir(self.las_dir)]

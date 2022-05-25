@@ -62,16 +62,16 @@ testdataloader = torch.utils.data.DataLoader(
         shuffle=True,
         num_workers=int(opt.workers))
 
-print(len(dataset), len(test_dataset))
-num_classes = len(dataset.classes)
-print('classes', num_classes)
+print('Number of training/testing items:', len(dataset), '/', len(test_dataset))
+output_dim = len(dataset.output_names)
+print('Output names', dataset.output_names)
 
 try:
     os.makedirs(opt.outf)
 except OSError:
     pass
 
-classifier = PointNetCls(k=num_classes, feature_transform=opt.feature_transform)
+classifier = PointNetCls(k=output_dim, feature_transform=opt.feature_transform)
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))
