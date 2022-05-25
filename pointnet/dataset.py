@@ -41,6 +41,8 @@ class LasDataset(data.Dataset):
         if self.npoints > len(pts):
             choice = np.random.choice(len(pts), self.npoints, replace=True)
             point_set = pts[choice, :]
+        else:
+            point_set = pts
 
         with open(self.json_files[index], 'r') as f:
             data = json.load(f)
