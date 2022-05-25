@@ -3,7 +3,7 @@ import torch.utils.data as data
 import torch
 import numpy as np
 import json
-from laspy.file import File as LasFile
+import laspy
 
 
 class LasDataset(data.Dataset):
@@ -28,8 +28,8 @@ class LasDataset(data.Dataset):
     def __getitem__(self, index):
 
         # Read the data into an array
-        with LasFile(self.las_files[index]) as f:
-            pts = np.vstack([f.x, f.y, f.z]).T
+        las = laspy.read(self.las_files[index])
+        pts = np.vstack([las.x, las.y, las.z]).T
 
         # Randomly subsample the point cloud
         choice = np.random.choice(len(pts), self.npoints, replace=True)
