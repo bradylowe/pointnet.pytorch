@@ -45,7 +45,7 @@ class LasDataset(data.Dataset):
         # Center the points and scale them to a box of size 1x1x1
         center = (buffered_annot[0] + buffered_annot[1]) / 2.0
         scale = np.max(buffered_annot[1] - buffered_annot[0])
-        point_set = (point_set - center) / scale
+        point_set[:2] = (point_set[:2] - center) / scale
 
         if self.data_augmentation:
             theta = np.random.uniform(0, np.pi * 2)
