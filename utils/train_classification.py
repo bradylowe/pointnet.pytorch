@@ -96,7 +96,6 @@ for epoch in range(opt.nepoch):
     scheduler.step()
     for i, data in enumerate(dataloader, 0):
         points, target = data
-        target = target[:, 0]
         points = points.transpose(2, 1)
         if using_cuda:
             points, target = points.cuda(), target.cuda()
