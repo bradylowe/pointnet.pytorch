@@ -96,7 +96,7 @@ num_batch = len(dataset) / opt.batchSize
 for epoch in range(opt.nepoch):
     scheduler.step()
     for i, data in enumerate(dataloader, 0):
-        points, target = data
+        (points, rough_rack), target = data
         points = points.transpose(2, 1)
         if using_cuda:
             points, target = points.cuda(), target.cuda()
