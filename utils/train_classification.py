@@ -9,6 +9,8 @@ from pointnet.model import PointNetCls, feature_transform_regularizer
 import torch.nn.functional as F
 from tqdm import tqdm
 
+os.system('color')
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
