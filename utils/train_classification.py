@@ -112,8 +112,7 @@ for epoch in range(opt.nepoch):
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
-            points, target = data
-            target = target[:, 0]
+            (points, rough_rack), target = data
             points = points.transpose(2, 1)
             if using_cuda:
                 points, target = points.cuda(), target.cuda()
@@ -127,8 +126,7 @@ for epoch in range(opt.nepoch):
 total_loss = 0
 total_testset = 0
 for i,data in tqdm(enumerate(testdataloader, 0)):
-    points, target = data
-    target = target[:, 0]
+    (points, rough_rack), target = data
     points = points.transpose(2, 1)
     if using_cuda:
         points, target = points.cuda(), target.cuda()
