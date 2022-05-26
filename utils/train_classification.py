@@ -23,7 +23,8 @@ parser.add_argument(
     '--nepoch', type=int, default=250, help='number of epochs to train for')
 parser.add_argument('--outf', type=str, default='cls', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
-parser.add_argument('--dataset', type=str, required=True, help="dataset path")
+parser.add_argument('--train_dataset', type=str, required=True, help="Training dataset path")
+parser.add_argument('--test_dataset', type=str, required=True, help="Testing dataset path")
 parser.add_argument('--dataset_type', type=str, default='las', help="dataset type")
 parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
 
@@ -46,11 +47,11 @@ torch.manual_seed(opt.manualSeed)
 dataset, test_dataset = None, None
 if opt.dataset_type == 'las':
     dataset = LasDataset(
-        root=opt.dataset,
+        root=opt.train_dataset,
         npoints=opt.num_points)
 
     test_dataset = LasDataset(
-        root=opt.dataset,
+        root=opt.test_dataset,
         split='test',
         npoints=opt.num_points,
         data_augmentation=False)
