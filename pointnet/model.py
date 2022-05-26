@@ -146,7 +146,7 @@ class PointNetCls(nn.Module):
         x = F.relu(self.bn1(self.fc1(x)))
         x = F.relu(self.bn2(self.dropout(self.fc2(x))))
         x = self.fc3(x)
-        return F.sigmoid(x) - 0.5, trans, trans_feat
+        return torch.sigmoid(x) - 0.5, trans, trans_feat
 
 
 class PointNetDenseCls(nn.Module):
