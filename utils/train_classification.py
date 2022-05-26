@@ -122,7 +122,8 @@ for epoch in range(opt.nepoch):
             print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss.item()))
         scheduler.step()
 
-    torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
+    if epoch % 5:
+        torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
 total_loss = 0
 total_testset = 0
