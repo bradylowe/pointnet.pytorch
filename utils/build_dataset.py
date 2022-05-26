@@ -96,6 +96,10 @@ class Rack:
                     'buffered': self.buffered.tolist()}
             json.dump(data, f)
 
+    def augment(self):
+        self.jittered = self.jitter(self.fine)
+        self.buffered = self.buffer(self.jittered)
+
 
 class PointCloud:
 
@@ -111,8 +115,6 @@ class PointCloud:
 
     def save(self, filename, mask):
         header = laspy.LasHeader(point_format=2, version='1.2')
-        #header.offsets = np.min(self.points[mask], axis=0)
-        #header.scales = np.array([0.001, 0.001, 0.001])
         las = laspy.LasData(header)
 
         las.x, las.y, las.z = self.points[mask].T
@@ -149,7 +151,7 @@ class Scan:
         self.pc = PointCloud(self.pc_file, rgb=rgb, classification=classification,
                              intensity=intensity, user_data=user_data)
 
-    def save(self, output_dir, zip=False):
+    def save(self, output_dir, zip=False, multiplier=1):
 
         pc_ext = 'laz' if zip else 'las'
 
@@ -170,18 +172,19 @@ class Scan:
 
         # Loop over racks
         for rack_idx, rack in enumerate(self.racks):
-            idx = rack_idx + idx_offset
+            for _ in range(multiplier):
+                rack.augment()
 
-            # Write JSON data
-            json_file = os.path.join(json_dir, f'rack_{idx}.json')
-            rack.save(json_file)
-            print('Saved', json_file)
+                idx = rack_idx + idx_offset
 
-            # Subsample LAS file and save
-            mask = Rack.points_in_rack(self.pc.points, rack.buffered)
-            pc_file = os.path.join(las_dir, f'rack_{idx}.{pc_ext}')
-            self.pc.save(pc_file, mask)
-            print('Saved', pc_file)
+                # Write JSON data
+                json_file = os.path.join(json_dir, f'rack_{idx}.json')
+                rack.save(json_file)
+
+                # Subsample LAS file and save
+                mask = Rack.points_in_rack(self.pc.points, rack.buffered)
+                pc_file = os.path.join(las_dir, f'rack_{idx}.{pc_ext}')
+                self.pc.save(pc_file, mask)
 
     def plot(self):
         for rack in self.racks:
