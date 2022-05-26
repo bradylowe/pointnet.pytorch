@@ -205,16 +205,19 @@ if __name__ == "__main__":
 
     import argparse
     parser = argparse.ArgumentParser(description='Create dataset')
-    parser.add_argument('--multiple', action='store_true', help='Load test file with multiple racks')
+    parser.add_argument('--input_json', type=str, required=True, help='Path to input LabelPC JSON file')
+    parser.add_argument('--output', type=str, help='Path at which to create new dataset')
+    parser.add_argument('--multiplier', type=int, default=1, help='# of times to sample each rack')
     parser.add_argument('--zip', action='store_true', help='If True, save point clouds as LAZ')
+    parser.add_argument('--plot', action='store_true', help='If True, just plot the dataset')
     args = parser.parse_args()
 
     # Load a LabelPC JSON file with rack(s) in it
-    if args.multiple:
-        test_file = 'test/many_racks.json'
-    else:
-        test_file = 'test/single_rack.json'
+    scan = Scan(args.input_json)
 
-    scan = Scan(test_file)
-    scan.plot()
-    #scan.save('dataset', zip=args.zip)
+    if args.plot:
+        scan.plot()
+    elif args.output:
+        scan.save(args.output, zip=args.zip, multiplier=args.multiplier)
+    else:
+        print('No output directory provided')
