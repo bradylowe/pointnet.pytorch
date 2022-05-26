@@ -94,7 +94,6 @@ num_batch = len(dataset) / opt.batchSize
 loss_function = MSELoss(reduction='sum')
 
 for epoch in range(opt.nepoch):
-    scheduler.step()
     for i, data in enumerate(dataloader, 0):
         (points, rough_rack), target = data
         points = points.transpose(2, 1)
@@ -120,6 +119,7 @@ for epoch in range(opt.nepoch):
             pred, _, _ = classifier(points)
             loss = loss_function(pred, target)
             print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss.item()))
+        scheduler.step()
 
     torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
