@@ -219,6 +219,6 @@ if __name__ == "__main__":
     if args.plot:
         scan.plot()
     elif args.output:
-        scan.save(args.output, zip=args.zip, multiplier=args.multiplier)
+        scan.save(args.output, zip=args.zip, multiplier=args.multiplier, min_points=args.min_points)
     else:
         print('No output directory provided')
