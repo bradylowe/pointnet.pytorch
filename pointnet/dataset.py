@@ -14,10 +14,13 @@ class LasDataset(data.Dataset):
                  npoints=2500,
                  split='train',
                  data_augmentation=False,
-                 normalize=False):
+                 normalize=False,
+                 point_attribs=('x', 'y', 'z')):
 
         self.root = root
         self.npoints = npoints
+        self.point_attribs = point_attribs
+        self.point_dim = len(self.point_attribs)
         self.split = split
         self.data_augmentation = data_augmentation
         self.normalize = normalize
@@ -31,7 +34,8 @@ class LasDataset(data.Dataset):
 
         # Read the data into an array
         las = laspy.read(self.las_files[index])
-        pts = np.vstack([las.x, las.y, las.z]).T
+
+        pts = np.vstack([getattr(las, attr) for attr in self.point_attribs]).T
 
         choice = np.random.choice(len(pts), self.npoints, replace=True)
         point_set = pts[choice, :]

@@ -45,16 +45,19 @@ random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
 dataset, test_dataset = None, None
+point_attributes = ['x', 'y', 'z']
 if opt.dataset_type == 'las':
     dataset = LasDataset(
         root=opt.train_dataset,
-        npoints=opt.num_points)
+        npoints=opt.num_points,
+        point_attribs=point_attributes)
 
     test_dataset = LasDataset(
         root=opt.test_dataset,
         split='test',
         npoints=opt.num_points,
-        data_augmentation=False)
+        data_augmentation=False,
+        point_attribs=point_attributes)
 else:
     exit('wrong dataset type')
 
@@ -80,7 +83,7 @@ try:
 except OSError:
     pass
 
-classifier = PointNetCls(k=output_dim, feature_transform=opt.feature_transform)
+classifier = PointNetCls(k=output_dim, feature_transform=opt.feature_transform, point_dim=dataset.point_dim)
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))
