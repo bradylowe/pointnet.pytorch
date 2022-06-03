@@ -11,7 +11,7 @@ class Rack:
     jitter_inward_limit = 0.5
     buffer_amt = 1.0
 
-    min_height = 0.5
+    min_height = 0.15
     max_height = 8.0
 
     def __init__(self, data: dict):
