@@ -13,7 +13,7 @@ class LasDataset(data.Dataset):
                  root,
                  npoints=2500,
                  split='train',
-                 data_augmentation=True,
+                 data_augmentation=False,
                  normalize=False):
 
         self.root = root
