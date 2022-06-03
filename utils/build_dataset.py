@@ -163,28 +163,27 @@ class Scan:
             os.makedirs(json_dir)
 
         # Make sure we don't overwrite existing files
-        idx_offset = 0
+        count = 0
         for filename in os.listdir(json_dir):
             n = int(filename[5:-5])
-            if n > idx_offset:
-                idx_offset = n
-        idx_offset += 1
+            if n >= count:
+                count = n + 1
 
         # Loop over racks
-        for rack_idx, rack in enumerate(self.racks):
+        for rack in self.racks:
             for _ in range(multiplier):
                 rack.augment()
 
-                idx = rack_idx + idx_offset
-
-                # Write JSON data
-                json_file = os.path.join(json_dir, f'rack_{idx}.json')
-                rack.save(json_file)
-
                 # Subsample LAS file and save
                 mask = Rack.points_in_rack(self.pc.points, rack.buffered)
-                pc_file = os.path.join(las_dir, f'rack_{idx}.{pc_ext}')
+                pc_file = os.path.join(las_dir, f'rack_{count}.{pc_ext}')
                 self.pc.save(pc_file, mask)
+
+                # Write JSON data
+                json_file = os.path.join(json_dir, f'rack_{count}.json')
+                rack.save(json_file)
+
+                count += 1
 
     def plot(self):
         for rack in self.racks:
