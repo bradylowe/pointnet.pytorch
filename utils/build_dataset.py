@@ -151,7 +151,7 @@ class Scan:
         self.pc = PointCloud(self.pc_file, rgb=rgb, classification=classification,
                              intensity=intensity, user_data=user_data)
 
-    def save(self, output_dir, zip=False, multiplier=1):
+    def save(self, output_dir, zip=False, multiplier=1, min_points=100000):
 
         pc_ext = 'laz' if zip else 'las'
 
@@ -176,14 +176,15 @@ class Scan:
 
                 # Subsample LAS file and save
                 mask = Rack.points_in_rack(self.pc.points, rack.buffered)
-                pc_file = os.path.join(las_dir, f'rack_{count}.{pc_ext}')
-                self.pc.save(pc_file, mask)
+                if mask.sum() >= min_points:
+                    pc_file = os.path.join(las_dir, f'rack_{count}.{pc_ext}')
+                    self.pc.save(pc_file, mask)
 
-                # Write JSON data
-                json_file = os.path.join(json_dir, f'rack_{count}.json')
-                rack.save(json_file)
+                    # Write JSON data
+                    json_file = os.path.join(json_dir, f'rack_{count}.json')
+                    rack.save(json_file)
 
-                count += 1
+                    count += 1
 
     def plot(self):
         for rack in self.racks:
@@ -207,6 +208,7 @@ if __name__ == "__main__":
     parser.add_argument('--input_json', type=str, required=True, help='Path to input LabelPC JSON file')
     parser.add_argument('--output', type=str, help='Path at which to create new dataset')
     parser.add_argument('--multiplier', type=int, default=1, help='# of times to sample each rack')
+    parser.add_argument('--min_points', type=float, default=100000, help='Min number of points needed to create file')
     parser.add_argument('--zip', action='store_true', help='If True, save point clouds as LAZ')
     parser.add_argument('--plot', action='store_true', help='If True, just plot the dataset')
     args = parser.parse_args()
