@@ -5,6 +5,25 @@ import os
 import laspy
 
 
+def rotation_matrix(degrees):
+    theta = np.radians(degrees)
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array(((c, -s), (s, c)))
+
+
+def rotate(points, degrees, center):
+    return (rotation_matrix(degrees) @ (points - center).T).T + center
+
+
+def points_in_rectangle(points, rect, min_height=None, max_height=None):
+    """Returns a boolean mask indicating which points are contained in this rect"""
+    min_p = np.array((rect[0][0], rect[0][1], min_height)) if min_height is not None else np.array(rect[0])
+    max_p = np.array((rect[1][0], rect[1][1], max_height)) if max_height is not None else np.array(rect[1])
+    keep_1 = (points[:, :len(min_p)] >= min_p).all(axis=1)
+    keep_2 = (points[:, :len(max_p)] <= max_p).all(axis=1)
+    return keep_1 & keep_2
+
+
 class Rack:
 
     jitter_outward_limit = 1.0
@@ -14,15 +33,29 @@ class Rack:
     min_height = 0.15
     max_height = 8.0
 
+    rotation_jitter_std = 1.0
+
     def __init__(self, data: dict):
         """Takes in a dictionary from a LabelPC shape annotation"""
         self.type = data['label']
-        # Todo: un-rotate the rack
-        self.vertices = np.array((np.min(data['vertices'], axis=0), np.max(data['vertices'], axis=0)))
+        self.orient = data['orient']
 
-        self.fine = self.vertices
-        self.jittered = self.jitter(self.fine)
-        self.buffered = self.buffer(self.jittered)
+        # Calculate the center of the vertices and un-rotate them
+        self.vertices = np.array(data['vertices'])
+        self.center = self.vertices.mean(axis=0)
+        self.vertices[:, :2] = rotate(self.vertices[:, :2], -self.orient, self.center)
+
+        # Calculate the correct (fine) annotation
+        self.fine = np.array((np.min(data['vertices'], axis=0), np.max(data['vertices'], axis=0)))
+
+        # Calculate a square that will inscribe the fine annotation at any angle
+        buffered_max_dim = np.linalg.norm(self.fine[1] - self.center)
+        self.square = np.array((self.center - buffered_max_dim, self.center + buffered_max_dim))
+
+        self.jittered = None  # Rack with randomly jittered vertices
+        self.buffered = None  # Rack with buffer around jittered rack
+        self.rot_jitter = None  # Small random rotation jitter
+        self.augment()
 
     @staticmethod
     def jitter(rack):
@@ -47,58 +80,50 @@ class Rack:
         """
         return np.array((rack[0] - Rack.buffer_amt, rack[1] + Rack.buffer_amt))
 
-    @staticmethod
-    def points_in_rack(points, rack):
-        """Returns a boolean mask indicating which points are contained in this rack"""
-        min_p = np.array((rack[0][0], rack[0][1], Rack.min_height))
-        max_p = np.array((rack[1][0], rack[1][1], Rack.max_height))
-        keep_1 = (points[:, :3] >= min_p).all(axis=1)
-        keep_2 = (points[:, :3] <= max_p).all(axis=1)
-        return keep_1 & keep_2
-
-    @staticmethod
-    def min_jitter_bounds(rack):
+    def min_jitter_bounds(self):
         sum_limit = Rack.jitter_outward_limit + Rack.jitter_inward_limit
-        center = rack[0] - (Rack.jitter_outward_limit - Rack.jitter_inward_limit) / 2.0
-        min_jitter, max_jitter = center + (0.0 - 0.5) * sum_limit, center + (1.0 - 0.5) * sum_limit
-        return min_jitter, max_jitter
+        origin = self.fine[0] - Rack.jitter_outward_limit
+        return np.array((origin, origin + sum_limit))
 
-    @staticmethod
-    def max_jitter_bounds(rack):
+    def max_jitter_bounds(self):
         sum_limit = Rack.jitter_outward_limit + Rack.jitter_inward_limit
-        center = rack[1] + (Rack.jitter_outward_limit - Rack.jitter_inward_limit) / 2.0
-        min_jitter, max_jitter = center + (0.0 - 0.5) * sum_limit, center + (1.0 - 0.5) * sum_limit
-        return min_jitter, max_jitter
+        origin = self.fine[1] + Rack.jitter_outward_limit
+        return np.array((origin - sum_limit, origin))
 
     @staticmethod
-    def plot_rack(rack, color, linestyle='-'):
-        x_min, y_min = rack[0]
-        x_max, y_max = rack[1]
+    def plot_rack(rack, angle, center, color, linestyle='-'):
 
-        x_points = [x_min, x_max, x_max, x_min, x_min]
-        y_points = [y_min, y_min, y_max, y_max, y_min]
+        (x_min, y_min), (x_max, y_max) = rack[0], rack[1]
+        vertices = np.array(((x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)))
+
+        vertices = rotate(vertices, angle, center)
+        x_points, y_points = vertices.T
 
         plt.plot(x_points, y_points, color, linestyle=linestyle)
 
     def plot(self):
         """Plot the three rectangles on the same plot with different colors"""
-        Rack.plot_rack(self.fine, 'green')
-        Rack.plot_rack(self.jittered, 'red', '--')
-        Rack.plot_rack(self.buffered, 'blue')
-        Rack.plot_rack(Rack.min_jitter_bounds(self.fine), 'violet')
-        Rack.plot_rack(Rack.max_jitter_bounds(self.fine), 'purple')
+        total_angle = self.orient + self.rot_jitter
+        Rack.plot_rack(self.fine, total_angle, self.center, 'green')
+        Rack.plot_rack(self.jittered, total_angle, self.center, 'red', '--')
+        Rack.plot_rack(self.buffered, total_angle, self.center, 'blue')
+        Rack.plot_rack(self.min_jitter_bounds(), total_angle, self.center, 'violet')
+        Rack.plot_rack(self.max_jitter_bounds(), total_angle, self.center, 'purple')
         plt.legend(['Fine', 'Rough', 'Buffered', 'Min Jitter', 'Max Jitter'])
 
     def save(self, filename):
         with open(filename, 'w') as f:
-            data = {'fine': self.fine.tolist(),
-                    'jittered': self.jittered.tolist(),
-                    'buffered': self.buffered.tolist()}
+            total_angle = self.orient + self.rot_jitter
+            data = {'fine': rotate(self.fine, total_angle, self.center).tolist(),
+                    'jittered': rotate(self.jittered, total_angle, self.center).tolist(),
+                    'buffered': rotate(self.buffered, total_angle, self.center).tolist(),
+                    'orient': total_angle}
             json.dump(data, f)
 
     def augment(self):
         self.jittered = self.jitter(self.fine)
         self.buffered = self.buffer(self.jittered)
+        self.rot_jitter = np.random.randn() * Rack.rotation_jitter_std
 
 
 class PointCloud:
@@ -113,24 +138,16 @@ class PointCloud:
         self.intensity = las.intensity if intensity else None
         self.user_data = las.user_data if user_data else None
 
-    def save(self, filename, mask):
+    @staticmethod
+    def save_xyz(points, filename):
         header = laspy.LasHeader(point_format=2, version='1.2')
         las = laspy.LasData(header)
-
-        las.x, las.y, las.z = self.points[mask].T
-        if self.rgb is not None:
-            las.red, las.green, las.blue = self.rgb[mask].T
-        if self.classification is not None:
-            las.classification = self.classification[mask]
-        if self.intensity is not None:
-            las.intensity = self.intensity[mask]
-        if self.user_data is not None:
-            las.user_data = self.user_data[mask]
-
+        las.x, las.y, las.z = points.T
         las.write(filename)
 
-    def plot(self, mask):
-        x, y = self.points[mask, :2].T
+    @staticmethod
+    def plot(points):
+        x, y = points.T[:2]
         plt.scatter(x, y, 1, 'black')
 
 
@@ -142,7 +159,6 @@ class Scan:
         self.json_file = json_file
         with open(self.json_file, 'r') as f:
             self.json_data = json.load(f)
-        self.racks = [Rack(shape) for shape in self.json_data['shapes'] if 'rack' in shape['label']]
 
         # Load points
         source = self.json_data['source']
@@ -151,9 +167,22 @@ class Scan:
         self.pc = PointCloud(self.pc_file, rgb=rgb, classification=classification,
                              intensity=intensity, user_data=user_data)
 
-    def save(self, output_dir, zip=False, multiplier=1, min_points=100000):
+        # Load rack annotations, find points for each rack
+        self.racks = [Rack(shape) for shape in self.json_data['shapes'] if 'rack' in shape['label']]
+        self.rack_points = [self.pc.points[points_in_rectangle(self.pc.points,
+                                                               rack.square,
+                                                               Rack.min_height,
+                                                               Rack.max_height)]
+                            for rack in self.racks]
 
-        pc_ext = 'laz' if zip else 'las'
+        # Un-rotate the point cloud subsamples to match the un-rotated racks
+        for idx, points in enumerate(self.rack_points):
+            rack = self.racks[idx]
+            self.rack_points[idx][:, :2] = rotate(points[:, :2], -rack.orient, rack.center)
+
+    def save(self, output_dir, laz=False, multiplier=1, min_points=100000):
+
+        pc_ext = 'laz' if laz else 'las'
 
         # Set up output directories
         las_dir, json_dir = os.path.join(output_dir, pc_ext), os.path.join(output_dir, 'json')
@@ -170,15 +199,18 @@ class Scan:
                 count = n + 1
 
         # Loop over racks
-        for rack in self.racks:
+        for rack, points in zip(self.racks, self.rack_points):
             for _ in range(multiplier):
                 rack.augment()
 
                 # Subsample LAS file and save
-                mask = Rack.points_in_rack(self.pc.points, rack.buffered)
+                mask = points_in_rectangle(points, rack.buffered)
                 if mask.sum() >= min_points:
+                    # Write point cloud data
                     pc_file = os.path.join(las_dir, f'rack_{count}.{pc_ext}')
-                    self.pc.save(pc_file, mask)
+                    rotated_points = points[mask]
+                    rotated_points[:, :2] = rotate(points[mask, :2], rack.orient + rack.rot_jitter, rack.center)
+                    PointCloud.save_xyz(rotated_points, pc_file)
 
                     # Write JSON data
                     json_file = os.path.join(json_dir, f'rack_{count}.json')
@@ -187,15 +219,18 @@ class Scan:
                     count += 1
 
     def plot(self):
-        for rack in self.racks:
+        for rack, points in zip(self.racks, self.rack_points):
             rack.plot()
-            self.pc.plot(Rack.points_in_rack(self.pc.points, rack.buffered))
+            mask = points_in_rectangle(points, rack.buffered)
+            PointCloud.plot(rotate(points[mask, :2], rack.orient + rack.rot_jitter, rack.center))
 
         # Make the plot bigger so it looks a little nicer
         buf = 3
-        x_lim, y_lim = plt.xlim(), plt.ylim()
-        plt.xlim([x_lim[0] - buf, x_lim[1] + buf])
-        plt.ylim([y_lim[0] - buf, y_lim[1] + buf])
+        (x_min, x_max), (y_min, y_max) = plt.xlim(), plt.ylim()
+        x_len, y_len = x_max - x_min, y_max - y_min
+        length = max(x_len, y_len)
+        plt.xlim([x_min - buf, x_min + length + buf])
+        plt.ylim([y_min - buf, y_min + length + buf])
 
         # Show the plot
         plt.show()
@@ -219,6 +254,6 @@ if __name__ == "__main__":
     if args.plot:
         scan.plot()
     elif args.output:
-        scan.save(args.output, zip=args.zip, multiplier=args.multiplier, min_points=args.min_points)
+        scan.save(args.output, laz=args.zip, multiplier=args.multiplier, min_points=args.min_points)
     else:
         print('No output directory provided')
