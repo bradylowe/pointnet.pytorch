@@ -7,5 +7,5 @@ setup(name='pointnet',
       package_dir={'pointnet': 'pointnet'},
       install_requires=['torch',
                         'tqdm',
-                        'plyfile'],
+                        'laspy'],
     version='0.0.1')
