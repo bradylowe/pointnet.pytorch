@@ -1,0 +1,152 @@
+import os
+import numpy as np
+from utils.Voxelize import VoxelGrid
+from utils.data import load_from_json, load_from_las, write_to_json, write_to_pkl
+from utils.rack import Rack
+from utils.scan import Scan
+
+
+def build_dataset_from_scan(scan, output_dir, zip=False, multiplier=1, min_points=100000):
+
+    pc_ext = 'laz' if zip else 'las'
+
+    # Set up output directories
+    las_dir, json_dir = os.path.join(output_dir, pc_ext), os.path.join(output_dir, 'json')
+    if not os.path.exists(las_dir):
+        os.makedirs(las_dir)
+    if not os.path.exists(json_dir):
+        os.makedirs(json_dir)
+
+    # Make sure we don't overwrite existing files
+    count = 0
+    for filename in os.listdir(json_dir):
+        n = int(filename[5:-5])
+        if n >= count:
+            count = n + 1
+
+    # Loop over racks
+    for rack in scan.racks:
+        for _ in range(multiplier):
+            rack.augment()
+
+            # Subsample LAS file and save
+            mask = Rack.points_in_rack(scan.pc.points, rack.buffered)
+            if mask.sum() >= min_points:
+                pc_file = os.path.join(las_dir, f'rack_{count}.{pc_ext}')
+                scan.pc.save(pc_file, mask)
+
+                # Write JSON data
+                json_file = os.path.join(json_dir, f'rack_{count}.json')
+                rack.save(json_file)
+
+                count += 1
+
+
+def load_data(json_file, min_z, max_z):
+    json_data = load_from_json(json_file)
+    points = load_from_las(json_file.replace('json', 'las'), attributes=('x', 'y', 'z'), pandas=True)
+    keep_above, keep_below = points.z >= min_z, points.z <= max_z
+    keep = np.logical_and(keep_above, keep_below)
+    return points.loc[keep], json_data
+
+
+def get_point_cloud_scale(points, resolution):
+    min_xy, max_xy = points[['x', 'y']].min(axis=0), points[['x', 'y']].max(axis=0)
+    return np.max(max_xy - min_xy) / resolution  # meters / pixels
+
+
+def build_bitmap(points, json_data, resolution, n_slices, min_z, max_z):
+
+    buffered_annot = json_data['buffered']
+
+    # Move the point cloud to (x, y, z) = (0, 0, 0)
+    points.loc[:, ['x', 'y']] = points[['x', 'y']] - buffered_annot[0]
+    points.loc[:, 'z'] = points['z'] - min_z
+
+    # Split the point cloud into 2D slices (bitmaps)
+    scale_xy = get_point_cloud_scale(points, resolution)
+    scale_z = (max_z - min_z) / n_slices
+    vg = VoxelGrid(points[['x', 'y', 'z']].values, mesh_size=(scale_xy, scale_xy, scale_z))
+    slices = np.zeros(shape=(n_slices, resolution, resolution), dtype=np.uint8)
+    for x in range(resolution):
+        for y in range(resolution):
+            for z in range(n_slices):
+                slices[z][x][y] = vg.counts((x, y, z))
+
+    return slices, scale_xy
+
+
+def scale_rack_to_image(json_data, scale_xy):
+    return ((np.array(json_data['fine']) - np.array(json_data['buffered'])) / scale_xy).tolist()
+
+
+def convert_all(json_path, output_dir, resolution, n_slices, min_z, max_z):
+
+    # Grab the input directory for replacing
+    input_dir = os.path.dirname(json_path)
+
+    # Make sure output directories exist
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+    if not os.path.isdir(os.path.join(output_dir, 'json')):
+        os.makedirs(os.path.join(output_dir, 'json'))
+    if not os.path.isdir(os.path.join(output_dir, 'pkl')):
+        os.makedirs(os.path.join(output_dir, 'pkl'))
+
+    for json_file in os.listdir(json_path):
+        print('Working on', json_file)
+        json_file = os.path.join(json_path, json_file)
+
+        points, json_data = load_data(json_file, min_z, max_z)
+        bitmap, scale_xy = build_bitmap(points, json_data, resolution, n_slices, min_z, max_z)
+        json_data['scaled_to_image'] = scale_rack_to_image(json_data, scale_xy)
+
+        write_to_pkl(bitmap, json_file.replace(input_dir, output_dir).replace('json', 'pkl'))
+        write_to_json(json_data, json_file.replace(input_dir, output_dir))
+
+
+def test(json_path, resolution, min_z, max_z):
+
+    for json_file in os.listdir(json_path):
+        print('Working on', json_file)
+        json_file = os.path.join(json_path, json_file)
+
+        points, json_data = load_data(json_file, min_z, max_z)
+        scale_xy = get_point_cloud_scale(points, resolution)
+        print('Data min/max:', points.min(axis=0), points.max(axis=0))
+        print('Buffered annotation:', json_data['buffered'])
+        print('Scaled annotation:', scale_rack_to_image(json_data, scale_xy))
+        points.loc[:, ['x', 'y']] = (points[['x', 'y']] - np.array(json_data['buffered'][0]))
+        points.loc[:, 'z'] = points['z'] - min_z
+        print('Shifted data min/max:', points.min(axis=0), points.max(axis=0))
+        if input('Continue? ').lower() in ['n', 'no']:
+            break
+
+
+if __name__ == "__main__":
+
+    import argparse
+    parser = argparse.ArgumentParser(description='Create dataset')
+    parser.add_argument('--input_json', type=str, required=True, help='Path to input LabelPC JSON file')
+    parser.add_argument('--output', type=str, help='Path at which to create new dataset')
+    parser.add_argument('--multiplier', type=int, default=1, help='# of times to sample each rack')
+    parser.add_argument('--min_points', type=float, default=100000, help='Min number of points needed to create file')
+    parser.add_argument('--resolution', type=int, default=512, help='Image resolution')
+    parser.add_argument('--n_slices', type=int, default=1, help='Number of vertical slices')
+    parser.add_argument('--min_z', type=float, default=0.1, help='Minimum z-height to keep')
+    parser.add_argument('--max_z', type=float, default=8.0, help='Maximum z-height to keep')
+    parser.add_argument('--test', action='store_true', help='If True, then run tests')
+    parser.add_argument('--plot', action='store_true', help='If True, just plot the dataset')
+    args = parser.parse_args()
+
+    scan = Scan(args.input_json)
+
+    if args.test:
+        test(args.input, args.resolution, args.min_z, args.max_z)
+    elif args.plot:
+        scan.plot()
+    elif args.output:
+        build_dataset_from_scan(scan, args.input_json, args.output,
+                                args.resolution, args.n_slices, args.min_z, args.max_z)
+    else:
+        print('No output directory provided...')
