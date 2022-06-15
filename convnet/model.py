@@ -42,20 +42,20 @@ class SimpleConv2d(nn.Module):
         assert output_size(image_resolution, 5, 2, 1) == output_size(image_resolution, 7, 3, 1)
 
         # Line detection layer
-        self.conv1a = torch.nn.Conv2d(n_slices, 128, kernel_size=5, padding=2, stride=1)
+        self.conv1a = torch.nn.Conv2d(n_slices, 64, kernel_size=5, padding=2, stride=1)
         layer_parameters_a.append((5, 2, 1))
         self.maxpool1a = torch.nn.MaxPool2d(kernel_size=2, stride=2)
         layer_parameters_a.append((2, 0, 2))
         self.dropout1a = torch.nn.Dropout(p=0.2)
 
-        self.conv1b = torch.nn.Conv2d(n_slices, 128, kernel_size=7, padding=3, stride=1)
-        layer_parameters_b.append((9, 4, 1))
+        self.conv1b = torch.nn.Conv2d(n_slices, 64, kernel_size=7, padding=3, stride=1)
+        layer_parameters_b.append((7, 3, 1))
         self.maxpool1b = torch.nn.MaxPool2d(kernel_size=2, stride=2)
         layer_parameters_b.append((2, 0, 2))
         self.dropout1b = torch.nn.Dropout(p=0.2)
 
         # Higher level analysis of lines
-        self.conv2 = torch.nn.Conv2d(128, 128, kernel_size=8, padding=2, stride=2)
+        self.conv2 = torch.nn.Conv2d(64, 128, kernel_size=8, padding=2, stride=2)
         layer_parameters_a.append((8, 2, 2))
         layer_parameters_b.append((8, 2, 2))
         self.maxpool2 = torch.nn.MaxPool2d(kernel_size=2, stride=2)
