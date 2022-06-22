@@ -1,19 +1,21 @@
 import os
+from typing import Tuple
 import numpy as np
+import pandas as pd
 from utils.Voxelize import VoxelGrid
-from utils.data import load_from_json, load_from_las, write_to_json, write_to_pkl
+from utils.data import load_from_json, load_from_las, write_to_pkl
 from utils.rack import Rack
 from utils.scan import Scan
 
 
-def build_dataset_from_scan(scan, output_dir, zip=False, multiplier=1, min_points=100000):
-
-    pc_ext = 'laz' if zip else 'las'
+def build_dataset_from_scan(scan: Scan, output_dir: str, multiplier: int = 1, min_points: int = 100000,
+                            resolution: int = 512, n_slices: int = 1,
+                            min_z: float = 0.5, max_z: float = 8.0):
 
     # Set up output directories
-    las_dir, json_dir = os.path.join(output_dir, pc_ext), os.path.join(output_dir, 'json')
-    if not os.path.exists(las_dir):
-        os.makedirs(las_dir)
+    pkl_dir, json_dir = os.path.join(output_dir, 'pkl'), os.path.join(output_dir, 'json')
+    if not os.path.exists(pkl_dir):
+        os.makedirs(pkl_dir)
     if not os.path.exists(json_dir):
         os.makedirs(json_dir)
 
@@ -32,8 +34,11 @@ def build_dataset_from_scan(scan, output_dir, zip=False, multiplier=1, min_point
             # Subsample LAS file and save
             mask = Rack.points_in_rack(scan.pc.points, rack.buffered)
             if mask.sum() >= min_points:
-                pc_file = os.path.join(las_dir, f'rack_{count}.{pc_ext}')
-                scan.pc.save(pc_file, mask)
+
+                # Write pkl file (bitmaps)
+                data_file = os.path.join(pkl_dir, f'rack_{count}.pkl')
+                bitmap = build_bitmap(scan.pc.points.loc[mask, ['x', 'y', 'z']], resolution, n_slices, min_z, max_z)
+                write_to_pkl(bitmap, data_file)
 
                 # Write JSON data
                 json_file = os.path.join(json_dir, f'rack_{count}.json')
@@ -42,7 +47,8 @@ def build_dataset_from_scan(scan, output_dir, zip=False, multiplier=1, min_point
                 count += 1
 
 
-def load_data(json_file, min_z, max_z):
+def load_data(json_file: str, min_z: float, max_z: float) -> Tuple[pd.DataFrame, dict]:
+    """Returns the point cloud data (only between min_z and max_z) as well as the JSON data"""
     json_data = load_from_json(json_file)
     points = load_from_las(json_file.replace('json', 'las'), attributes=('x', 'y', 'z'), pandas=True)
     keep_above, keep_below = points.z >= min_z, points.z <= max_z
@@ -50,23 +56,35 @@ def load_data(json_file, min_z, max_z):
     return points.loc[keep], json_data
 
 
-def get_point_cloud_scale(points, resolution):
-    min_xy, max_xy = points[['x', 'y']].min(axis=0), points[['x', 'y']].max(axis=0)
-    return np.max(max_xy - min_xy) / resolution  # meters / pixels
+def get_scale(bounds: np.ndarray, resolution: int):
+    """Returns the maximum of the lengths of the x and y dimensions (point spread) divided by n_pixels"""
+    return np.max(bounds[1, :2] - bounds[0, :2]) / resolution  # meters / pixels
 
 
-def build_bitmap(points, json_data, resolution, n_slices, min_z, max_z):
+def build_bitmap(points: pd.DataFrame, resolution: int, n_slices: int,
+                 min_z: float, max_z: float) -> Tuple[np.ndarray, float]:
+    """
+    Turns a point cloud object (with json_data) into one or more 2D bitmap images.
+    :param points: Input point cloud as a pandas DataFrame object with columns x, y, and z
+    :param resolution: Number of pixels in the horizontal and vertical dimensions
+    :param n_slices: Number of horizontal slices to cut the point cloud into
+    :param min_z: Only count data points that are above this height
+    :param max_z: Only count data points that are below this height
+    """
 
-    buffered_annot = json_data['buffered']
+    bounds = np.array(((*points[['x', 'y']].min(axis=0), min_z),
+                       (*points[['x', 'y']].max(axis=0), max_z)))
 
     # Move the point cloud to (x, y, z) = (0, 0, 0)
-    points.loc[:, ['x', 'y']] = points[['x', 'y']] - buffered_annot[0]
-    points.loc[:, 'z'] = points['z'] - min_z
+    points.loc[:, ['x', 'y']] = points[['x', 'y']] - bounds[0][:2]
+    points.loc[:, 'z'] = points['z'] - bounds[0][2]
 
-    # Split the point cloud into 2D slices (bitmaps)
-    scale_xy = get_point_cloud_scale(points, resolution)
+    # Build a voxel grid using the point cloud
+    scale_xy = get_scale(bounds, resolution)
     scale_z = (max_z - min_z) / n_slices
     vg = VoxelGrid(points[['x', 'y', 'z']].values, mesh_size=(scale_xy, scale_xy, scale_z))
+
+    # Split the point cloud into a stack of 2D slices (bitmaps)
     slices = np.zeros(shape=(n_slices, resolution, resolution), dtype=np.uint8)
     for x in range(resolution):
         for y in range(resolution):
@@ -76,33 +94,9 @@ def build_bitmap(points, json_data, resolution, n_slices, min_z, max_z):
     return slices, scale_xy
 
 
-def scale_rack_to_image(json_data, scale_xy):
+def scale_rack_to_image(json_data: dict, scale_xy: float) -> list:
+    """Apply the same scaling to a rack annotation as to the point cloud"""
     return ((np.array(json_data['fine']) - np.array(json_data['buffered'])) / scale_xy).tolist()
-
-
-def convert_all(json_path, output_dir, resolution, n_slices, min_z, max_z):
-
-    # Grab the input directory for replacing
-    input_dir = os.path.dirname(json_path)
-
-    # Make sure output directories exist
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    if not os.path.isdir(os.path.join(output_dir, 'json')):
-        os.makedirs(os.path.join(output_dir, 'json'))
-    if not os.path.isdir(os.path.join(output_dir, 'pkl')):
-        os.makedirs(os.path.join(output_dir, 'pkl'))
-
-    for json_file in os.listdir(json_path):
-        print('Working on', json_file)
-        json_file = os.path.join(json_path, json_file)
-
-        points, json_data = load_data(json_file, min_z, max_z)
-        bitmap, scale_xy = build_bitmap(points, json_data, resolution, n_slices, min_z, max_z)
-        json_data['scaled_to_image'] = scale_rack_to_image(json_data, scale_xy)
-
-        write_to_pkl(bitmap, json_file.replace(input_dir, output_dir).replace('json', 'pkl'))
-        write_to_json(json_data, json_file.replace(input_dir, output_dir))
 
 
 def test(json_path, resolution, min_z, max_z):
@@ -112,7 +106,9 @@ def test(json_path, resolution, min_z, max_z):
         json_file = os.path.join(json_path, json_file)
 
         points, json_data = load_data(json_file, min_z, max_z)
-        scale_xy = get_point_cloud_scale(points, resolution)
+        bounds = np.array(((*points[['x', 'y']].min(axis=0), min_z),
+                           (*points[['x', 'y']].max(axis=0), max_z)))
+        scale_xy = get_scale(bounds, resolution)
         print('Data min/max:', points.min(axis=0), points.max(axis=0))
         print('Buffered annotation:', json_data['buffered'])
         print('Scaled annotation:', scale_rack_to_image(json_data, scale_xy))
@@ -146,7 +142,7 @@ if __name__ == "__main__":
     elif args.plot:
         scan.plot()
     elif args.output:
-        build_dataset_from_scan(scan, args.input_json, args.output,
+        build_dataset_from_scan(scan, args.output, args.multiplier, args.min_points,
                                 args.resolution, args.n_slices, args.min_z, args.max_z)
     else:
         print('No output directory provided...')
