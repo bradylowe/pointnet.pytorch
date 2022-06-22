@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from utils.data import write_to_json
 
@@ -48,7 +49,10 @@ class Rack:
     @staticmethod
     def points_in_rack(points, rack):
         """Returns a boolean mask indicating which points are contained in this rack"""
-        xyz = points.loc[:, ['x', 'y', 'z']].values
+        if isinstance(points, pd.DataFrame):
+            xyz = points.loc[:, ['x', 'y', 'z']].values
+        else:
+            xyz = points[:, :3]
         min_p = np.array((rack[0][0], rack[0][1], Rack.min_height))
         max_p = np.array((rack[1][0], rack[1][1], Rack.max_height))
         keep_1 = (xyz >= min_p).all(axis=1)

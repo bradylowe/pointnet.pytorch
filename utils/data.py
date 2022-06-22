@@ -27,7 +27,7 @@ def write_to_pkl(data, filename):
 
 def load_from_las(filename, attributes=('x', 'y', 'z'), pandas=False):
     las = laspy.read(filename)
-    data = np.vstack([las.__getattr__(attr for attr in attributes)]).T
+    data = np.vstack([las.__getattr__(attr) for attr in attributes]).T
     if pandas:
         return pd.DataFrame(data, columns=attributes)
     else:

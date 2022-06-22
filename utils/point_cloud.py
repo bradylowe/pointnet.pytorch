@@ -15,7 +15,7 @@ class PointCloud:
             attributes.append('intensity')
         if user_data:
             attributes.append('user_data')
-        self.points = load_from_las(filename, attributes)
+        self.points = load_from_las(filename, attributes, pandas=True)
 
     def save(self, filename, mask):
         write_to_las(self.points.loc[mask], filename)

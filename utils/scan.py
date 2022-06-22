@@ -17,7 +17,7 @@ class Scan:
         # Load points
         source = self.json_data['source']
         ext = source.split('.')[-1]
-        self.pc_file = os.path.join(os.path.dirname(self.json_file), source).replace('JSON', ext.upper())
+        self.pc_file = os.path.join(os.path.dirname(json_file), source).replace('JSON', ext.upper())
         self.pc = PointCloud(self.pc_file, rgb=rgb, classification=classification,
                              intensity=intensity, user_data=user_data)
 
