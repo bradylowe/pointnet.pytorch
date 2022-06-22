@@ -16,7 +16,11 @@ class LasDatasetSlices(data.Dataset):
         self.pkl_files = [os.path.join(self.pkl_dir, f) for f in os.listdir(self.pkl_dir)]
         self.json_files = [os.path.join(self.json_dir, f) for f in os.listdir(self.json_dir)]
 
+        self.resolution = self.get_resolution()
         self.n_slices = self.get_n_slices()
+
+    def get_resolution(self):
+        return load_from_pkl(self.pkl_files[0]).shape[1:]
 
     def get_n_slices(self):
         return load_from_pkl(self.pkl_files[0]).shape[0]
