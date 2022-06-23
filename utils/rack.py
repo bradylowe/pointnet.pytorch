@@ -15,13 +15,29 @@ class Rack:
 
     def __init__(self, data: dict):
         """Takes in a dictionary from a LabelPC shape annotation"""
-        self.type = data['label']
+        self.data = data
         # Todo: un-rotate the rack
         self.vertices = np.array((np.min(data['vertices'], axis=0), np.max(data['vertices'], axis=0)))
 
-        self.fine = self.vertices
-        self.jittered = self.jitter(self.fine)
-        self.buffered = self.buffer(self.jittered)
+        self.data['fine'] = self.vertices
+        self.data['jittered'] = self.jitter(self.fine)
+        self.data['buffered'] = self.buffer(self.jittered)
+
+    @property
+    def type(self):
+        return self.data['label']
+
+    @property
+    def fine(self):
+        return self.data['fine']
+
+    @property
+    def jittered(self):
+        return self.data['jittered']
+
+    @property
+    def buffered(self):
+        return self.data['buffered']
 
     @staticmethod
     def jitter(rack):
@@ -93,11 +109,9 @@ class Rack:
         plt.legend(['Fine', 'Rough', 'Buffered', 'Min Jitter', 'Max Jitter'])
 
     def save(self, filename):
-        data = {'fine': self.fine.tolist(),
-                'jittered': self.jittered.tolist(),
-                'buffered': self.buffered.tolist()}
+        data = {key: value.tolist() if isinstance(value, np.ndarray) else value for key, value in self.data.items()}
         write_to_json(data, filename)
 
     def augment(self):
-        self.jittered = self.jitter(self.fine)
-        self.buffered = self.buffer(self.jittered)
+        self.data['jittered'] = self.jitter(self.fine)
+        self.data['buffered'] = self.buffer(self.jittered)
