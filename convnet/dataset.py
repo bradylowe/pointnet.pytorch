@@ -8,13 +8,16 @@ from utils.data import load_from_json, load_from_pkl
 
 class LasDatasetSlices(data.Dataset):
 
-    def __init__(self, root):
-        self.root = root
+    def __init__(self, paths):
+        self.paths = paths
         self.output_names = ['min_x', 'min_y', 'max_x', 'max_y']
 
-        self.json_dir, self.pkl_dir = os.path.join(root, 'json'), os.path.join(root, 'pkl')
-        self.pkl_files = [os.path.join(self.pkl_dir, f) for f in os.listdir(self.pkl_dir)]
-        self.json_files = [os.path.join(self.json_dir, f) for f in os.listdir(self.json_dir)]
+        self.pkl_files, self.json_files = [], []
+        for path in paths:
+            json_dir = os.path.join(path, 'json')
+            pkl_dir = os.path.join(path, 'pkl')
+            self.pkl_files.extend([os.path.join(pkl_dir, f) for f in os.listdir(pkl_dir)])
+            self.json_files.extend([os.path.join(json_dir, f) for f in os.listdir(json_dir)])
 
         self.resolution = self.get_resolution(self.pkl_files[0])
         self.n_slices = self.get_n_slices(self.pkl_files[0])
