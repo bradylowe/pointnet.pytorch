@@ -8,14 +8,14 @@ from utils.data import load_from_json, load_from_pkl
 
 class LasDatasetSlices(data.Dataset):
 
-    def __init__(self, paths):
+    def __init__(self, paths, split='train'):
         self.paths = paths
         self.output_names = ['min_x', 'min_y', 'max_x', 'max_y']
 
         self.pkl_files, self.json_files = [], []
         for path in paths:
-            json_dir = os.path.join(path, 'json')
-            pkl_dir = os.path.join(path, 'pkl')
+            json_dir = os.path.join(path, split, 'json')
+            pkl_dir = os.path.join(path, split, 'pkl')
             self.pkl_files.extend([os.path.join(pkl_dir, f) for f in os.listdir(pkl_dir)])
             self.json_files.extend([os.path.join(json_dir, f) for f in os.listdir(json_dir)])
 
