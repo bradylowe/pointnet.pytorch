@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--batchSize', type=int, default=4, help='input batch size')
 parser.add_argument('--workers', type=int, default=0, help='number of data loading workers')
 parser.add_argument('--nepoch', type=int, default=250, help='number of epochs to train for')
+parser.add_argument('--lr', type=float, default=0.002, help='learning rate')
 parser.add_argument('--outf', type=str, default='cls', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
 parser.add_argument('--datasets', type=str, required=True, nargs='+', help="Paths to datasets")
@@ -66,7 +67,7 @@ classifier = SimpleConv2d(image_resolution=dataset.resolution, n_slices=dataset.
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))
 
-optimizer = optim.Adam(classifier.parameters(), lr=0.1, betas=(0.9, 0.999))
+optimizer = optim.Adam(classifier.parameters(), lr=opt.lr, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 if using_cuda:
     classifier.cuda()
