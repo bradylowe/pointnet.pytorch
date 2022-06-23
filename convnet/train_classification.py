@@ -105,7 +105,9 @@ for epoch in range(opt.nepoch):
                    classifier.conv1b.weight.cpu().detach()]
         old_weights = [w for w in weights]
 
-        png_dir = 'weights_png'
+        png_dir = os.path.abspath(os.path.join('.', 'weights_png'))
+        if not os.path.isdir(png_dir):
+            os.makedirs(png_dir)
         png_file = os.path.join(png_dir, f'rough_weights_epoch{epoch}_conv1.png')
         fig, _ = plot_arrays(weights[0][:64, 0, :, :], shape=(8, 8), show_labels=False)
         fig.savefig(png_file, pad_inches=0.1, dpi=1000)
