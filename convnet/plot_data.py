@@ -22,7 +22,7 @@ def plot_arrays(data, cmap='Greens', interpolation='nearest', shape=None, titles
     def get_i_j_from_idx_and_shape(idx, shape):
         return idx // shape[0], idx % shape[0]
 
-    if titles is None:
+    if titles is None and show_labels:
         if len(data) == 1:
             titles = 'Channel 0'
         else:
