@@ -31,11 +31,12 @@ class LasDatasetSlices(data.Dataset):
         return load_from_pkl(pkl_file).shape[0]
 
     def __getitem__(self, index):
-
         slices = load_from_pkl(self.pkl_files[index]).astype(np.float32)
-        target = load_from_json(self.json_files[index])['scaled_to_image']
-        target = np.array(target, dtype=np.float32).flatten()
-        return torch.from_numpy(slices), torch.from_numpy(target)
+        json_data = load_from_json(self.json_files[index])
+        scale_xy = json_data['scale_xy']
+        target = np.array(json_data['fine'], dtype=np.float32)
+        target = (target - target[0]) / scale_xy
+        return torch.from_numpy(slices), torch.from_numpy(target.flatten())
 
     def __len__(self):
         return len(self.pkl_files)
