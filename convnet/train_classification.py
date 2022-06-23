@@ -8,24 +8,18 @@ from convnet.dataset import LasDatasetSlices
 from convnet.model import SimpleConv2d
 from torch.nn import MSELoss
 from tqdm import tqdm
-from utils.plot_data import plot_array, plot_arrays
+from convnet.plot_data import plot_arrays
 
 os.system('color')
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    '--batchSize', type=int, default=4, help='input batch size')
-parser.add_argument(
-    '--resolution', type=int, default=512, nargs='+', help='Image resolution')
-parser.add_argument(
-    '--workers', type=int, default=0, help='number of data loading workers')
-parser.add_argument(
-    '--nepoch', type=int, default=250, help='number of epochs to train for')
+parser.add_argument('--batchSize', type=int, default=4, help='input batch size')
+parser.add_argument('--workers', type=int, default=0, help='number of data loading workers')
+parser.add_argument('--nepoch', type=int, default=250, help='number of epochs to train for')
 parser.add_argument('--outf', type=str, default='cls', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
-parser.add_argument('--train_dataset', type=str, required=True, help="Training dataset path")
-parser.add_argument('--test_dataset', type=str, required=True, help="Testing dataset path")
+parser.add_argument('--datasets', type=str, required=True, nargs='+', help="Paths to datasets")
 
 using_cuda = torch.cuda.is_available()
 if using_cuda:
@@ -43,8 +37,8 @@ print("Random Seed: ", opt.manualSeed)
 random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
-dataset = LasDatasetSlices(root=opt.train_dataset)
-test_dataset = LasDatasetSlices(root=opt.test_dataset)
+dataset = LasDatasetSlices(paths=opt.datasets, split='train')
+test_dataset = LasDatasetSlices(paths=opt.datasets, split='test')
 
 dataloader = torch.utils.data.DataLoader(
     dataset,
@@ -67,7 +61,7 @@ try:
 except OSError:
     pass
 
-classifier = SimpleConv2d(image_resolution=opt.resolution, n_slices=dataset.n_slices)
+classifier = SimpleConv2d(image_resolution=dataset.resolution, n_slices=dataset.n_slices)
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))
@@ -109,11 +103,14 @@ for epoch in range(opt.nepoch):
         weights = [classifier.conv1a.weight.cpu().detach(),
                    classifier.conv1b.weight.cpu().detach()]
         old_weights = [w for w in weights]
-        png_dir = os.path.join(opt.train_dataset, 'png')
+
+        png_dir = os.path.join(opt.train_dataset, 'weights_png')
         png_file = os.path.join(png_dir, f'rough_weights_epoch{epoch}_conv1.png')
-        plot_arrays(weights[0][:64, 0, :, :], save_to=png_file, shape=(8, 8), axis_labels=False)
+        fig, _ = plot_arrays(weights[0][:64, 0, :, :], shape=(8, 8), show_labels=False)
+        fig.savefig(png_file, pad_inches=0.1, dpi=1000)
         png_file = os.path.join(png_dir, f'fine_weights_epoch{epoch}_conv2.png')
-        plot_arrays(weights[1][:64, 0, :, :], save_to=png_file, shape=(8, 8), axis_labels=False)
+        fig, _ = plot_arrays(weights[1][:64, 0, :, :], shape=(8, 8), show_labels=False)
+        fig.savefig(png_file, pad_inches=0.1, dpi=1000)
 
 
 total_loss = 0
