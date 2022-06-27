@@ -86,7 +86,7 @@ for epoch in range(opt.nepoch):
         loss = loss_function(pred, target)
         loss.backward()
         optimizer.step()
-        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
+        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item() / dataset.resolution ** 2))
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
@@ -96,7 +96,7 @@ for epoch in range(opt.nepoch):
             classifier = classifier.eval()
             pred = classifier(slices)
             loss = loss_function(pred, target)
-            print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss.item()))
+            print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss.item() / dataset.resolution ** 2))
         scheduler.step()
 
     if epoch % 50 == 0:
@@ -127,4 +127,4 @@ for i, data in tqdm(enumerate(testdataloader, 0)):
     total_loss += loss_function(pred, target)
     total_testset += slices.size()[0]
 
-print("final average loss {}".format(total_loss / float(total_testset)))
+print("final average loss {}".format(total_loss / float(total_testset) / dataset.resolution ** 2))
