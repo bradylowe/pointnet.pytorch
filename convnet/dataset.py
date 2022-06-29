@@ -35,7 +35,8 @@ class LasDatasetSlices(data.Dataset):
         json_data = load_from_json(self.json_files[index])
         scale_xy = json_data['scale_xy']
         target = np.array(json_data['fine'], dtype=np.float32)
-        target = (target - target[0]) / scale_xy
+        offset = np.array(json_data['buffered'], dtype=np.float32)
+        target = (target - offset[0]) / scale_xy  # Map the annotation onto the bitmap coordinate system
         return torch.from_numpy(slices), torch.from_numpy(target.flatten())
 
     def __len__(self):
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset', type=str, required=True, help="Dataset path")
     opt = parser.parse_args()
 
-    dataset = LasDatasetSlices(root=opt.dataset)
+    dataset = LasDatasetSlices(paths=[opt.dataset])
     for data, target in dataset:
         print()
         print('Data min:', data.min(axis=0))
