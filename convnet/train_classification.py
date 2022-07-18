@@ -74,7 +74,7 @@ if using_cuda:
     classifier.cuda()
 
 num_batch = len(dataset) / opt.batchSize
-loss_function = MSELoss(reduction='sum')
+loss_function = MSELoss(reduction='mean')
 
 for epoch in range(opt.nepoch):
     for i, data in enumerate(dataloader, 0):
@@ -118,7 +118,6 @@ for epoch in range(opt.nepoch):
 
 
 total_loss = 0
-total_testset = 0
 for i, data in tqdm(enumerate(testdataloader, 0)):
     slices, target = data
     if using_cuda:
@@ -126,6 +125,5 @@ for i, data in tqdm(enumerate(testdataloader, 0)):
     classifier = classifier.eval()
     pred = classifier(slices)
     total_loss += loss_function(pred, target)
-    total_testset += slices.size()[0]
 
-print("final average loss {}".format(total_loss * RACK_SCALE / float(total_testset)))
+print("final average loss {}".format(total_loss * RACK_SCALE))
