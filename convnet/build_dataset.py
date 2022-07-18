@@ -6,6 +6,7 @@ from utils.Voxelize import VoxelGrid
 from utils.data import load_from_json, load_from_las, write_to_pkl
 from utils.rack import Rack
 from utils.scan import Scan
+from convnet.dataset import RACK_SCALE
 
 
 def build_dataset_from_scan(scan: Scan, output_dir: str, split: float = 0.1, multiplier: int = 1,
@@ -46,12 +47,11 @@ def build_dataset_from_scan(scan: Scan, output_dir: str, split: float = 0.1, mul
 
                 # Write pkl file (bitmaps)
                 data_file = os.path.join(pkl_dir, f'rack_{count}.pkl')
-                slices, scale_xy = build_bitmap(scan.pc.points.loc[mask, ['x', 'y', 'z']], resolution, n_slices, min_z, max_z)
+                slices = build_bitmap(scan.pc.points.loc[mask, ['x', 'y', 'z']], resolution, n_slices, min_z, max_z)
                 write_to_pkl(slices, data_file)
 
                 # Write JSON data
                 json_file = os.path.join(json_dir, f'rack_{count}.json')
-                rack.data['scale_xy'] = scale_xy
                 rack.save(json_file)
 
                 count += 1
@@ -66,13 +66,8 @@ def load_data(json_file: str, min_z: float, max_z: float) -> Tuple[pd.DataFrame,
     return points.loc[keep], json_data
 
 
-def get_scale(bounds: np.ndarray, resolution: int):
-    """Returns the maximum of the lengths of the x and y dimensions (point spread) divided by n_pixels"""
-    return np.max(bounds[1, :2] - bounds[0, :2]) / resolution  # meters / pixels
-
-
 def build_bitmap(points: pd.DataFrame, resolution: int, n_slices: int,
-                 min_z: float, max_z: float) -> Tuple[np.ndarray, float]:
+                 min_z: float, max_z: float) -> np.ndarray:
     """
     Turns a point cloud object (with json_data) into one or more 2D bitmap images.
     :param points: Input point cloud as a pandas DataFrame object with columns x, y, and z
@@ -82,17 +77,13 @@ def build_bitmap(points: pd.DataFrame, resolution: int, n_slices: int,
     :param max_z: Only count data points that are below this height
     """
 
-    bounds = np.array(((*points[['x', 'y']].min(axis=0), min_z),
-                       (*points[['x', 'y']].max(axis=0), max_z)))
-
     # Move the point cloud to (x, y, z) = (0, 0, 0)
-    points.loc[:, ['x', 'y']] = points[['x', 'y']] - bounds[0][:2]
-    points.loc[:, 'z'] = points['z'] - bounds[0][2]
+    points.loc[:, ['x', 'y']] = points[['x', 'y']] - points[['x', 'y']].min(axis=0)
+    points.loc[:, 'z'] = points['z'] - points['z'].min(axis=0)
 
     # Build a voxel grid using the point cloud
-    scale_xy = get_scale(bounds, resolution)
     scale_z = (max_z - min_z) / n_slices
-    vg = VoxelGrid(points[['x', 'y', 'z']].values, mesh_size=(scale_xy, scale_xy, scale_z))
+    vg = VoxelGrid(points[['x', 'y', 'z']].values, mesh_size=(RACK_SCALE, RACK_SCALE, scale_z))
 
     # Split the point cloud into a stack of 2D slices (bitmaps)
     slices = np.zeros(shape=(n_slices, resolution, resolution), dtype=np.uint8)
@@ -101,7 +92,7 @@ def build_bitmap(points: pd.DataFrame, resolution: int, n_slices: int,
             for z in range(n_slices):
                 slices[z][x][y] = vg.counts((x, y, z))
 
-    return slices, scale_xy
+    return slices
 
 
 def scale_rack_to_image(json_data: dict, scale_xy: float) -> list:
@@ -109,19 +100,16 @@ def scale_rack_to_image(json_data: dict, scale_xy: float) -> list:
     return ((np.array(json_data['fine']) - np.array(json_data['buffered'])) / scale_xy).tolist()
 
 
-def test(json_path, resolution, min_z, max_z):
+def test(json_path, min_z, max_z):
 
     for json_file in os.listdir(json_path):
         print('Working on', json_file)
         json_file = os.path.join(json_path, json_file)
 
         points, json_data = load_data(json_file, min_z, max_z)
-        bounds = np.array(((*points[['x', 'y']].min(axis=0), min_z),
-                           (*points[['x', 'y']].max(axis=0), max_z)))
-        scale_xy = get_scale(bounds, resolution)
         print('Data min/max:', points.min(axis=0), points.max(axis=0))
         print('Buffered annotation:', json_data['buffered'])
-        print('Scaled annotation:', scale_rack_to_image(json_data, scale_xy))
+        print('Scaled annotation:', scale_rack_to_image(json_data, RACK_SCALE))
         points.loc[:, ['x', 'y']] = (points[['x', 'y']] - np.array(json_data['buffered'][0]))
         points.loc[:, 'z'] = points['z'] - min_z
         print('Shifted data min/max:', points.min(axis=0), points.max(axis=0))
@@ -150,7 +138,7 @@ if __name__ == "__main__":
     scan = Scan(args.input_json)
 
     if args.test:
-        test(args.input, args.resolution, args.min_z, args.max_z)
+        test(args.input, args.min_z, args.max_z)
     elif args.plot:
         scan.plot()
     elif args.output:

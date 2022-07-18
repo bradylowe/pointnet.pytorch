@@ -9,6 +9,7 @@ from convnet.model import SimpleConv2d
 from torch.nn import MSELoss
 from tqdm import tqdm
 from convnet.plot_data import plot_arrays
+from convnet.dataset import RACK_SCALE
 
 os.system('color')
 
@@ -86,7 +87,7 @@ for epoch in range(opt.nepoch):
         loss = loss_function(pred, target)
         loss.backward()
         optimizer.step()
-        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item() / dataset.resolution ** 2))
+        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss * RACK_SCALE))
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
@@ -96,7 +97,7 @@ for epoch in range(opt.nepoch):
             classifier = classifier.eval()
             pred = classifier(slices)
             loss = loss_function(pred, target)
-            print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss.item() / dataset.resolution ** 2))
+            print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss * RACK_SCALE))
         scheduler.step()
 
     if epoch % 50 == 0:
@@ -127,4 +128,4 @@ for i, data in tqdm(enumerate(testdataloader, 0)):
     total_loss += loss_function(pred, target)
     total_testset += slices.size()[0]
 
-print("final average loss {}".format(total_loss / float(total_testset) / dataset.resolution ** 2))
+print("final average loss {}".format(total_loss * RACK_SCALE / float(total_testset)))

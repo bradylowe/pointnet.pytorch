@@ -6,6 +6,9 @@ import os
 from utils.data import load_from_json, load_from_pkl
 
 
+RACK_SCALE = 60.0  # Largest rack length ever spotted in the wild
+
+
 class LasDatasetSlices(data.Dataset):
 
     def __init__(self, paths, split='train'):
@@ -33,10 +36,9 @@ class LasDatasetSlices(data.Dataset):
     def __getitem__(self, index):
         slices = load_from_pkl(self.pkl_files[index]).astype(np.float32)
         json_data = load_from_json(self.json_files[index])
-        scale_xy = json_data['scale_xy']
         target = np.array(json_data['fine'], dtype=np.float32)
         offset = np.array(json_data['buffered'], dtype=np.float32)
-        target = (target - offset[0]) / scale_xy  # Map the annotation onto the bitmap coordinate system
+        target = (target - offset[0]) / RACK_SCALE  # Map the annotation onto the bitmap coordinate system
         return torch.from_numpy(slices), torch.from_numpy(target.flatten())
 
     def __len__(self):
