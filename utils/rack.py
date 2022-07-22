@@ -18,6 +18,7 @@ class Rack:
         self.data = data
         # Todo: un-rotate the rack
         self.vertices = np.array((np.min(data['vertices'], axis=0), np.max(data['vertices'], axis=0)))
+        self.length, self.depth = self.data['length'], self.data['depth']
 
         self.data['fine'] = self.vertices
         self.data['jittered'] = self.jitter(self.fine)
