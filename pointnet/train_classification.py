@@ -13,14 +13,10 @@ os.system('color')
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    '--batchSize', type=int, default=32, help='input batch size')
-parser.add_argument(
-    '--num_points', type=int, default=2500, help='input batch size')
-parser.add_argument(
-    '--workers', type=int, default=0, help='number of data loading workers')
-parser.add_argument(
-    '--nepoch', type=int, default=250, help='number of epochs to train for')
+parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
+parser.add_argument('--num_points', type=int, default=2500, help='input batch size')
+parser.add_argument('--workers', type=int, default=0, help='number of data loading workers')
+parser.add_argument('--nepoch', type=int, default=250, help='number of epochs to train for')
 parser.add_argument('--outf', type=str, default='cls', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
 parser.add_argument('--train_dataset', type=str, required=True, help="Training dataset path")
@@ -88,7 +84,6 @@ classifier = PointNetCls(k=output_dim, feature_transform=opt.feature_transform, 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))
 
-
 optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 if using_cuda:
@@ -105,7 +100,7 @@ for epoch in range(opt.nepoch):
             points, target = points.cuda(), target.cuda()
         optimizer.zero_grad()
         classifier = classifier.train()
-        pred, trans, trans_feat = classifier(points)
+        pred, _, trans_feat = classifier(points)
         loss = loss_function(pred, target)
         if opt.feature_transform:
             loss += feature_transform_regularizer(trans_feat) * 0.001
