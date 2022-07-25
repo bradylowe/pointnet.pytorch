@@ -43,7 +43,6 @@ class LasDataset(data.Dataset):
         with open(self.json_files[index], 'r') as f:
             data = json.load(f)
             fine_annot = np.asarray(data['fine'], dtype=np.float32)
-            rough_annot = np.asarray(data['jittered'], dtype=np.float32)
             buffered_annot = np.asarray(data['buffered'], dtype=np.float32)
 
         # Center the point cloud and racks and scale them to a box of size 1x1x1
@@ -51,7 +50,6 @@ class LasDataset(data.Dataset):
         scale = np.max(buffered_annot[1] - buffered_annot[0])
         point_set[:, :2] = (point_set[:, :2] - center) / scale
         fine_annot = (fine_annot - center) / scale
-        rough_annot = (rough_annot - center) / scale
 
         if self.data_augmentation:
             theta = np.random.uniform(0, np.pi * 2)
@@ -60,9 +58,8 @@ class LasDataset(data.Dataset):
             point_set += np.random.normal(0, 0.02, size=point_set.shape)  # random jitter
 
         point_set = torch.from_numpy(point_set.astype(np.float32))
-        rough_annot = torch.from_numpy(rough_annot.flatten())
         fine_annot = torch.from_numpy(fine_annot.flatten())
-        return (point_set, rough_annot), fine_annot
+        return point_set, fine_annot
 
     def __len__(self):
         return len(self.las_files)
