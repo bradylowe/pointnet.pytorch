@@ -6,7 +6,10 @@ import os
 from utils.data import load_from_json, load_from_pkl
 
 
-RACK_SCALE = 60.0  # Largest rack length ever spotted in the wild
+# The largest rack observed yet is ~150 meters long
+# When we remove the facility from our dataset that contains that rack, then
+# the next highest rack length is 107.4 meters.
+RACK_SCALE = 107.4
 
 
 class LasDatasetSlices(data.Dataset):
