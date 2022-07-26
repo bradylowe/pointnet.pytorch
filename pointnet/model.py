@@ -91,8 +91,9 @@ class PointNetfeat(nn.Module):
 
 
 class PointNetCls(nn.Module):
-    def __init__(self, k=2, feature_transform=False, point_dim=3):
+    def __init__(self, k=2, feature_transform=False, point_dim=3, return_features=False):
         super(PointNetCls, self).__init__()
+        self.return_features = return_features
         self.feature_transform = feature_transform
         self.feat = PointNetfeat(global_feat=True, feature_transform=feature_transform, point_dim=point_dim)
         self.fc1 = nn.Linear(1024, 512)
@@ -106,6 +107,8 @@ class PointNetCls(nn.Module):
     def forward(self, x):
         x, trans, trans_feat = self.feat(x)
         x = F.relu(self.bn1(self.fc1(x)))
+        if self.return_features:
+            return x
         x = F.relu(self.bn2(self.dropout(self.fc2(x))))
         x = self.fc3(x)
         return torch.sigmoid(x) - 0.5, trans, trans_feat

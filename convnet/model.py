@@ -32,8 +32,9 @@ def total_items_in_block(img_size, channels):
 
 
 class SimpleConv2d(nn.Module):
-    def __init__(self, image_resolution, n_slices=1):
+    def __init__(self, image_resolution, n_slices=1, return_features=False):
         super().__init__()
+        self.return_features = return_features
 
         self.image_resolution = image_resolution
         layer_parameters_a = []
@@ -92,6 +93,8 @@ class SimpleConv2d(nn.Module):
 
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
+        if self.return_features:
+            return x
         x = F.relu(self.fc3(x))
         x = F.relu(self.fc4(x))
         return x
