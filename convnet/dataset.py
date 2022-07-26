@@ -14,16 +14,22 @@ RACK_SCALE = 107.4
 
 class LasDatasetSlices(data.Dataset):
 
-    def __init__(self, paths, split='train'):
+    def __init__(self, paths=None, pkl_files=None, json_files=None, split='train'):
         self.paths = paths
         self.output_names = ['min_x', 'min_y', 'max_x', 'max_y']
 
-        self.pkl_files, self.json_files = [], []
-        for path in paths:
-            json_dir = os.path.join(path, split, 'json')
-            pkl_dir = os.path.join(path, split, 'pkl')
-            self.pkl_files.extend([os.path.join(pkl_dir, f) for f in os.listdir(pkl_dir)])
-            self.json_files.extend([os.path.join(json_dir, f) for f in os.listdir(json_dir)])
+        if paths is not None:
+            self.pkl_files, self.json_files = [], []
+            for path in paths:
+                json_dir = os.path.join(path, split, 'json')
+                pkl_dir = os.path.join(path, split, 'pkl')
+                self.pkl_files.extend([os.path.join(pkl_dir, f) for f in os.listdir(pkl_dir)])
+                self.json_files.extend([os.path.join(json_dir, f) for f in os.listdir(json_dir)])
+        elif pkl_files is not None and json_files is not None:
+            self.pkl_files, self.json_files = pkl_files, json_files
+        else:
+            print('Error: Could not create LasDatasetSlices object')
+            return
 
         self.resolution = self.get_resolution(self.pkl_files[0])
         self.n_slices = self.get_n_slices(self.pkl_files[0])

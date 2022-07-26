@@ -10,14 +10,28 @@ import laspy
 class LasDataset(data.Dataset):
 
     def __init__(self,
-                 root,
+                 root=None,
                  npoints=2500,
                  split='train',
                  data_augmentation=False,
                  normalize=False,
-                 point_attribs=('x', 'y', 'z')):
+                 point_attribs=('x', 'y', 'z'),
+                 json_files=None,
+                 las_files=None):
 
-        self.root = root
+        if root is not None:
+            self.root = root
+            self.json_dir, self.las_dir = os.path.join(root, 'json'), os.path.join(root, 'las')
+            self.las_files = [os.path.join(self.las_dir, f) for f in os.listdir(self.las_dir)]
+            self.json_files = [os.path.join(self.json_dir, f) for f in os.listdir(self.json_dir)]
+        elif json_files is not None and las_files is not None:
+            self.json_dir, self.las_dir = os.path.dirname(json_files[0]), os.path.dirname(las_files[0])
+            self.json_files, self.las_files = json_files, las_files
+            self.root = os.path.dirname(self.json_dir)
+        else:
+            print('Error: Could not create LasDataset object')
+            return
+
         self.npoints = npoints
         self.point_attribs = point_attribs
         self.point_dim = len(self.point_attribs)
@@ -25,10 +39,6 @@ class LasDataset(data.Dataset):
         self.data_augmentation = data_augmentation
         self.normalize = normalize
         self.output_names = ['min_x', 'min_y', 'max_x', 'max_y']
-
-        self.json_dir, self.las_dir = os.path.join(root, 'json'), os.path.join(root, 'las')
-        self.las_files = [os.path.join(self.las_dir, f) for f in os.listdir(self.las_dir)]
-        self.json_files = [os.path.join(self.json_dir, f) for f in os.listdir(self.json_dir)]
 
     def __getitem__(self, index):
 
