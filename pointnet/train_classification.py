@@ -8,6 +8,7 @@ from pointnet.dataset import LasDataset
 from pointnet.model import PointNetCls, feature_transform_regularizer
 from torch.nn import MSELoss, L1Loss
 from tqdm import tqdm
+from utils.log import log_loss
 
 os.system('color')
 
@@ -23,6 +24,7 @@ parser.add_argument('--train_dataset', type=str, required=True, help="Training d
 parser.add_argument('--test_dataset', type=str, required=True, help="Testing dataset path")
 parser.add_argument('--dataset_type', type=str, default='las', help="dataset type")
 parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
+parser.add_argument('--log', type=str, default='loss.log', help="Path to a log of the training and testing loss")
 
 using_cuda = torch.cuda.is_available()
 if using_cuda:
@@ -32,6 +34,8 @@ else:
 
 opt = parser.parse_args()
 print(opt)
+
+log_file = os.path.join('logs', opt.log) if opt.log else ''
 
 blue = lambda x: '\033[94m' + x + '\033[0m'
 
@@ -107,6 +111,8 @@ for epoch in range(opt.nepoch):
         loss.backward()
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
+        if opt.log:
+            log_loss('train', loss.item(), opt.log)
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
@@ -118,6 +124,8 @@ for epoch in range(opt.nepoch):
             pred, _, _ = classifier(points)
             loss = loss_function(pred, target)
             print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss.item()))
+            if opt.log:
+                log_loss('test', loss.item(), opt.log)
         scheduler.step()
 
     if epoch % 5:
@@ -132,7 +140,10 @@ for i, data in tqdm(enumerate(testdataloader, 0)):
         points, target = points.cuda(), target.cuda()
     classifier = classifier.eval()
     pred, _, _ = classifier(points)
-    total_loss += loss_function(pred, target)
+    loss = loss_function(pred, target)
+    total_loss += loss
     total_testset += points.size()[0]
+    if opt.log:
+        log_loss('final_test', loss.item(), opt.log)
 
 print("final average loss {}".format(total_loss / float(total_testset)))
