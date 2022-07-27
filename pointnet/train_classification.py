@@ -24,7 +24,7 @@ parser.add_argument('--train_dataset', type=str, required=True, help="Training d
 parser.add_argument('--test_dataset', type=str, required=True, help="Testing dataset path")
 parser.add_argument('--dataset_type', type=str, default='las', help="dataset type")
 parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
-parser.add_argument('--log', type=str, default='loss.log', help="Path to a log of the training and testing loss")
+parser.add_argument('--log', type=str, help="Path to a log of the training and testing loss")
 
 using_cuda = torch.cuda.is_available()
 if using_cuda:
