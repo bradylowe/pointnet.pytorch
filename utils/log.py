@@ -1,5 +1,8 @@
+import os.path as osp
+
 
 def log_loss(category, value, log_filename):
-    # Make sure the log file exists and has the header
-    # Append the category and value to the CSV file
-    pass
+    with open(log_filename, 'w') as f:
+        if not osp.exists(log_filename):
+            f.write('category,value')
+        f.write(f'{category},{value}')
