@@ -107,11 +107,6 @@ for epoch in range(opt.nepoch):
         if points.shape[0] == 1:
             continue
         pred, _, trans_feat = classifier(points)
-        print()
-        print(target)
-        print('___')
-        print(pred)
-        break
         loss = loss_function(pred, target)
         if opt.feature_transform:
             loss += feature_transform_regularizer(trans_feat) * 0.001
@@ -133,7 +128,6 @@ for epoch in range(opt.nepoch):
             print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss.item()))
             if opt.log:
                 log_loss('test', epoch, loss.item(), opt.log)
-        break
         scheduler.step()
 
     if epoch % 5:
