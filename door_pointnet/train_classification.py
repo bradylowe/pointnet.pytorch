@@ -132,7 +132,7 @@ for epoch in range(opt.nepoch):
                 log_loss('test', epoch, loss.item(), opt.log)
         scheduler.step()
 
-    if epoch % 5:
+    if (epoch % 5) == 0:
         torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
 total_loss = 0

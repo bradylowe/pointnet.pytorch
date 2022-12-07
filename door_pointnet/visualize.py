@@ -32,7 +32,7 @@ parser.add_argument('--model', type=str, required=True, help='model path')
 parser.add_argument('--dataset', type=str, required=True, help="Dataset path")
 parser.add_argument('--n_items', type=int, default=0, help="Maximum number of items to process (default all)")
 parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
-parser.add_argument('--output', type=str, help="Path to put output images")
+parser.add_argument('--show', action='store_true', help="show the results instead of saving them")
 opt = parser.parse_args()
 
 
@@ -46,15 +46,15 @@ print('Number of items:', len(dataset))
 output_dim = len(dataset.output_names)
 print('Output names', dataset.output_names)
 
-# Check for output dir (create if does not exist)
-if opt.output and not os.path.exists(opt.output):
-    os.makedirs(opt.output)
-
 # Load model
 classifier = PointNetCls(k=output_dim, feature_transform=opt.feature_transform, point_dim=dataset.point_dim)
 classifier.load_state_dict(torch.load(opt.model))
 classifier.eval()
 
+output_dir = opt.dataset + 'Output'
+# Check for output dir (create if does not exist)
+if not opt.show and not os.path.exists(output_dir):
+    os.makedirs(opt.output)
 
 for idx in range(opt.n_items or len(dataset)):
     las_file = dataset.csv_data.iloc[idx]['las']
@@ -62,8 +62,8 @@ for idx in range(opt.n_items or len(dataset)):
     points = points.T[None, :]
     pred, _, _ = classifier.forward(points)
     points, pred, target = points.detach().numpy(), pred.detach().numpy(), target.detach().numpy()
-    if opt.output:
-        plot_results(points[0], pred[0], target, os.path.join(opt.output, las_file.replace('.las', '.png')))
-    else:
+    if opt.show:
         plot_results(points[0], pred[0], target)
+    else:
+        plot_results(points[0], pred[0], target, os.path.join(output_dir, las_file.replace('.las', '.png')))
 
