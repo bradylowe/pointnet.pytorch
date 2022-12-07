@@ -46,7 +46,7 @@ random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
 dataset, test_dataset = None, None
-point_attributes = ['x', 'y']
+point_attributes = ['x', 'y', 'z']
 if opt.dataset_type == 'las':
     dataset = LasDataset(
         root=opt.train_dataset,

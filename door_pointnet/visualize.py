@@ -37,7 +37,7 @@ opt = parser.parse_args()
 
 
 # Load data
-point_attributes = ['x', 'y']
+point_attributes = ['x', 'y', 'z']
 dataset = LasDataset(
     root=opt.dataset,
     npoints=opt.num_points,
