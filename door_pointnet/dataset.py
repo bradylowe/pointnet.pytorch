@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import os
 import laspy
+from utils.geometry import rotate
 
 
 class LasDataset(data.Dataset):
@@ -40,21 +41,25 @@ class LasDataset(data.Dataset):
 
         las = laspy.read(os.path.join(self.root, row['las']))
         pts = np.vstack([getattr(las, attr) for attr in self.point_attribs]).T
+        target = np.array((row['x1'], row['y1'], row['x2'], row['y2']))
 
         # Randomly subsample
         choice = np.random.choice(len(pts), self.npoints, replace=True)
         point_set = pts[choice, :]
 
+        if self.data_augmentation:
+            rot = np.random.random() * 360.0
+            point_set = rotate(point_set, rot)
+            target[0:2] = rotate(target[0:2], rot)
+            target[2:4] = rotate(target[2:4], rot)
+
         # Shift to (0, 0, 0)
         min_point = point_set.min(axis=0)
         point_set = (point_set - min_point) / row['box_size']
+        target[0:2] = (target[0:2] - min_point[:2]) / row['box_size']
+        target[2:4] = (target[2:4] - min_point[:2]) / row['box_size']
 
-        if len(min_point) == 3:
-            mx, my, _ = min_point
-        else:
-            mx, my = min_point
-        answer = np.array((row['x1'] - mx, row['y1'] - my, row['x2'] - mx, row['y2'] - my)) / row['box_size']
-        return torch.from_numpy(point_set).float(), torch.from_numpy(answer).float()
+        return torch.from_numpy(point_set).float(), torch.from_numpy(target).float()
 
     def __len__(self):
         return len(self.csv_data)

@@ -25,6 +25,7 @@ parser.add_argument('--test_dataset', type=str, required=True, help="Testing dat
 parser.add_argument('--dataset_type', type=str, default='las', help="dataset type")
 parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
 parser.add_argument('--log', type=str, help="Path to a log of the training and testing loss")
+parser.add_argument('--augment', action='store_true', help='Perform data augmentation')
 
 using_cuda = torch.cuda.is_available()
 if using_cuda:
@@ -50,7 +51,8 @@ if opt.dataset_type == 'las':
     dataset = LasDataset(
         root=opt.train_dataset,
         npoints=opt.num_points,
-        point_attribs=point_attributes)
+        point_attribs=point_attributes,
+        data_augmentation=opt.augment)
 
     test_dataset = LasDataset(
         root=opt.test_dataset,
