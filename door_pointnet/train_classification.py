@@ -8,7 +8,7 @@ from door_pointnet.dataset import LasDataset
 from door_pointnet.model import PointNetCls, feature_transform_regularizer
 from torch.nn import MSELoss, L1Loss
 from tqdm import tqdm
-from utils.log import log_loss
+from utils.log import LogLoss
 
 os.system('color')
 
@@ -36,7 +36,7 @@ else:
 opt = parser.parse_args()
 print(opt)
 
-log_file = os.path.join('logs', opt.log) if opt.log else ''
+loss_log = LogLoss(opt.log)
 
 blue = lambda x: '\033[94m' + x + '\033[0m'
 
@@ -115,8 +115,8 @@ for epoch in range(opt.nepoch):
         loss.backward()
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
-        if opt.log:
-            log_loss('train', epoch, loss.item(), opt.log)
+        if loss_log:
+            loss_log.write('train', epoch, loss.item())
 
         if i % 10 == 0:
             _, data = next(enumerate(testdataloader, 0))
@@ -128,8 +128,8 @@ for epoch in range(opt.nepoch):
             pred, _, _ = classifier(points)
             loss = loss_function(pred, target)
             print('[%d: %d/%d] %s loss: %f' % (epoch, i, num_batch, blue('test'), loss.item()))
-            if opt.log:
-                log_loss('test', epoch, loss.item(), opt.log)
+            if loss_log:
+                loss_log.write('test', epoch, loss.item())
         scheduler.step()
 
     if (epoch % 5) == 0:
@@ -147,7 +147,7 @@ for i, data in tqdm(enumerate(testdataloader, 0)):
     loss = loss_function(pred, target)
     total_loss += loss
     total_testset += points.size()[0]
-    if opt.log:
-        log_loss('final_test', 0, loss.item(), opt.log)
+    if loss_log:
+        loss_log.write('final_test', 0, loss.item())
 
 print("final average loss {}".format(total_loss / float(total_testset)))
