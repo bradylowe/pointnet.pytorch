@@ -64,7 +64,7 @@ LOAD THE DATA
 """
 dataset, test_dataset = None, None
 point_attributes = ['x', 'y', 'z']
-if opt.dataset_type == opt.use_pillars:
+if opt.use_pillars:
     dataset = PointPillarsDataset(
         root=opt.train_dataset,
         grid_size=opt.grid_size,
@@ -123,7 +123,7 @@ if opt.use_pillars:
     classifier = PointNetPillars(point_dim=dataset.point_dim, output_dim=dataset.point_dim,
                                  n_pillars=opt.n_pillars, points_per_pillar=opt.points_per_pillar)
 else:
-    classifier = PointNetCls(k=output_dim, feature_transform=opt.feature_transform, point_dim=dataset.point_dim)
+    classifier = PointNetCls(k=output_dim, point_dim=dataset.point_dim)
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))
