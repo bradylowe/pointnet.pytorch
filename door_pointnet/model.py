@@ -112,6 +112,40 @@ class PointNetCls(nn.Module):
         return torch.sigmoid(x), trans, trans_feat
 
 
+class PointNetPillars(nn.Module):
+    def __init__(self, point_dim, output_dim, n_pillars, points_per_pillar):
+        super(PointNetPillars, self).__init__()
+        self.conv1d = torch.nn.Conv1d(point_dim, 64, 1)
+        self.bn1d = nn.BatchNorm1d(512)
+
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, output_dim)
+        self.dropout = nn.Dropout(p=0.3)
+        self.bn2 = nn.BatchNorm1d(256)
+
+    def forward(self, x):
+        """
+        input dimension (number of pillars [P], points per pillar [N], point dimensionality [D])
+        Calculate a grid for the input point cloud.
+        Find P pillars in the data with non-zero points
+        - subsample pillars if too full, upsample pillars if too empty
+        Calculate additional point values:  (D, P, N) -> (C, P, N)
+        Run PointNet on each pillar:  (C, P, N) -> (C, P, K)
+        Max of the per-point features:  (C, P, K) -> (C, P)
+        Scatter the features onto a pseudo-image:  (C, P) -> (C, W, H)
+        Down-sample using CNN:  (C, W, H) -> (C2, W2, H2)
+        Fully-connected layer to predict:  (C2, W2, H2) -> (F) -> (4)
+        """
+        x, trans, trans_feat = self.pointnet(x)
+        x = F.leaky_relu(self.bn1(self.fc1(x)))
+        if self.return_features:
+            return x
+        x = F.leaky_relu(self.bn2(self.dropout(self.fc2(x))))
+        x = self.fc3(x)
+        return torch.sigmoid(x), trans, trans_feat
+
+
 class PointNetDenseCls(nn.Module):
     def __init__(self, k=2, feature_transform=False, point_dim=3):
         super(PointNetDenseCls, self).__init__()
