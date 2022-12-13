@@ -126,13 +126,14 @@ class PointNetPillars(nn.Module):
 
     def forward(self, x):
         """
-        input dimension (number of pillars [P], points per pillar [N], point dimensionality [D])
-        Calculate a grid for the input point cloud.
-        Find P pillars in the data with non-zero points
-        - subsample pillars if too full, upsample pillars if too empty
-        Calculate additional point values:  (D, P, N) -> (C, P, N)
-        Run PointNet on each pillar:  (C, P, N) -> (C, P, K)
-        Max of the per-point features:  (C, P, K) -> (C, P)
+        D = point dimensionality (number of values per point) [x, y, z, xc, yc, zc, xo, yo]
+        P = number of pillars
+        N = number of points per pillar
+        C = number of features calculated by "pointnet" (conv1d)
+        W, H = width, height of the grid [max(x_ind) + 1, max(y_ind) + 1]
+
+        Run PointNet on each pillar:  (D, P, N) -> (C, P, N)
+        Max of the per-point features:  (C, P, N) -> (C, P)
         Scatter the features onto a pseudo-image:  (C, P) -> (C, W, H)
         Down-sample using CNN:  (C, W, H) -> (C2, W2, H2)
         Fully-connected layer to predict:  (C2, W2, H2) -> (F) -> (4)
